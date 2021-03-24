@@ -1,0 +1,24 @@
+{
+  "name": "aws-rekognition-sandbox",
+  "version": "1.0.0",
+  "description": "Amazon Rekognitionで出来る事を調査する為の検証用プロジェクト",
+  "private": true,
+  "scripts": {
+    "deploy": "serverless deploy -v",
+    "remove": "serverless remove -v"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keitakn/aws-rekognition-sandbox.git"
+  },
+  "author": "https://github.com/keitakn",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/keitakn/aws-rekognition-sandbox/issues"
+  },
+  "homepage": "https://github.com/keitakn/aws-rekognition-sandbox#readme",
+  "devDependencies": {
+    "serverless": "^2.31.0",
+    "serverless-prune-plugin": "^1.4.4"
+  }
+}

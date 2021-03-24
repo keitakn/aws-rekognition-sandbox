@@ -14,11 +14,13 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/service/rekognition"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/google/uuid"
 )
 
 var uploader *s3manager.Uploader
+var rekognitionSdk *rekognition.Rekognition
 
 //nolint:gochecknoinits
 func init() {
@@ -31,6 +33,7 @@ func init() {
 	}
 
 	uploader = s3manager.NewUploader(sess)
+	rekognitionSdk = rekognition.New(sess)
 }
 
 type RequestBody struct {
@@ -38,7 +41,8 @@ type RequestBody struct {
 }
 
 type ResponseOkBody struct {
-	Message string `json:"message"`
+	Message string      `json:"message"`
+	Result  interface{} `json:"result"`
 }
 
 type ResponseErrorBody struct {
@@ -141,7 +145,39 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	resBody := &ResponseOkBody{Message: "Hello Amazon Rekognition🐱"}
+	// 画像解析
+	image := &rekognition.Image{
+		Bytes: decodeImg,
+	}
+
+	input := &rekognition.DetectLabelsInput{}
+	input.SetImage(image)
+	input.SetMaxLabels(10)
+	input.SetMinConfidence(50)
+	output, err := rekognitionSdk.DetectLabels(input)
+	if err != nil {
+		resBody := &ResponseErrorBody{Message: "Failed rekognition"}
+		resBodyJson, _ := json.Marshal(resBody)
+
+		statusCode := 500
+
+		res := events.APIGatewayV2HTTPResponse{
+			StatusCode: statusCode,
+			Headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			Body:            string(resBodyJson),
+			IsBase64Encoded: false,
+		}
+
+		return res, err
+	}
+
+	log.Println("🐰")
+	log.Println(output.Labels)
+	log.Println("🐰")
+
+	resBody := &ResponseOkBody{Message: "Hello Amazon Rekognition🐱", Result: output.Labels}
 	resBodyJson, _ := json.Marshal(resBody)
 
 	statusCode := 200

@@ -173,10 +173,6 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	log.Println("🐰")
-	log.Println(output.Labels)
-	log.Println("🐰")
-
 	resBody := &ResponseOkBody{Message: "Hello Amazon Rekognition🐱", Result: output.Labels}
 	resBodyJson, _ := json.Marshal(resBody)
 

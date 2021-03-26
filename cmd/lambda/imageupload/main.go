@@ -150,10 +150,15 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		Bytes: decodeImg,
 	}
 
+	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
+	const maxLabels = int64(10)
+	// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
+	const minConfidence = float64(85)
+
 	input := &rekognition.DetectLabelsInput{}
 	input.SetImage(image)
-	input.SetMaxLabels(10)
-	input.SetMinConfidence(50)
+	input.SetMaxLabels(maxLabels)
+	input.SetMinConfidence(minConfidence)
 	output, err := rekognitionSdk.DetectLabels(input)
 	if err != nil {
 		resBody := &ResponseErrorBody{Message: "Failed rekognition"}

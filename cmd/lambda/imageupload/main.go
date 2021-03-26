@@ -41,8 +41,7 @@ type RequestBody struct {
 }
 
 type ResponseOkBody struct {
-	Message string      `json:"message"`
-	Result  interface{} `json:"result"`
+	Labels interface{} `json:"labels"`
 }
 
 type ResponseErrorBody struct {
@@ -193,7 +192,7 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	resBody := &ResponseOkBody{Message: "Hello Amazon Rekognition🐱", Result: detectLabelsOutput.Labels}
+	resBody := &ResponseOkBody{Labels: detectLabelsOutput.Labels}
 	resBodyJson, _ := json.Marshal(resBody)
 
 	statusCode := 200

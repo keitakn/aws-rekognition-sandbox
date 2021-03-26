@@ -1,0 +1,54 @@
+service: aws-rekognition-sandbox
+
+frameworkVersion: '>=2.0.0 <3.0.0'
+
+plugins:
+  - serverless-prune-plugin
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: ${env:DEPLOY_STAGE}
+  region: ${env:REGION}
+  profile: ${self:custom.profiles.${self:provider.stage}}
+  logRetentionInDays: 3
+  lambdaHashingVersion: 20201221
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:*
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - rekognition:*
+          Resource: "*"
+  environment:
+    DEPLOY_STAGE: ${env:DEPLOY_STAGE}
+    TRIGGER_BUCKET_NAME: ${env:TRIGGER_BUCKET_NAME}
+    REGION: ${env:REGION}
+  httpApi:
+    cors: true
+
+custom:
+  defaultStage: dev
+  profiles:
+    dev: nekochans-dev
+  prune:
+    automatic: true
+    number: 1
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
+functions:
+  imageRecognition:
+    handler: bin/imagerecognition
+    events:
+      - httpApi:
+          method: POST
+          path: /images/recognition

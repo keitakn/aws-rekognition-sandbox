@@ -95,7 +95,24 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	decodeImg, err := base64.StdEncoding.DecodeString(reqBody.Image)
+	decodedImg, err := base64.StdEncoding.DecodeString(reqBody.Image)
+	if err != nil {
+		resBody := &ResponseErrorBody{Message: "Failed Decode Base64 Image"}
+		resBodyJson, _ := json.Marshal(resBody)
+
+		statusCode := 500
+
+		res := events.APIGatewayV2HTTPResponse{
+			StatusCode: statusCode,
+			Headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			Body:            string(resBodyJson),
+			IsBase64Encoded: false,
+		}
+
+		return res, err
+	}
 
 	uid, err := uuid.NewRandom()
 	if err != nil {
@@ -117,7 +134,7 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	}
 
 	buffer := new(bytes.Buffer)
-	buffer.Write(decodeImg)
+	buffer.Write(decodedImg)
 
 	uploadKey := "tmp/" + uid.String() + ".jpg"
 	_, err = uploader.Upload(&s3manager.UploadInput{
@@ -146,8 +163,8 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	}
 
 	// 画像解析
-	image := &rekognition.Image{
-		Bytes: decodeImg,
+	rekognitionImage := &rekognition.Image{
+		Bytes: decodedImg,
 	}
 
 	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
@@ -156,7 +173,7 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	const minConfidence = float64(85)
 
 	input := &rekognition.DetectLabelsInput{}
-	input.SetImage(image)
+	input.SetImage(rekognitionImage)
 	input.SetMaxLabels(maxLabels)
 	input.SetMinConfidence(minConfidence)
 	output, err := rekognitionSdk.DetectLabels(input)

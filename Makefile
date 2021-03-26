@@ -1,7 +1,7 @@
 .PHONY: build clean deploy test test-ci lint format
 
 build:
-	GOOS=linux GOARCH=amd64 go build -o bin/imageupload ./cmd/lambda/imageupload/main.go
+	GOOS=linux GOARCH=amd64 go build -o bin/imagerecognition ./cmd/lambda/imagerecognition/main.go
 
 clean:
 	rm -rf ./bin

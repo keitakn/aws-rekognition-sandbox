@@ -46,9 +46,9 @@ package:
     - ./bin/**
 
 functions:
-  imageUpload:
-    handler: bin/imageupload
+  imageRecognition:
+    handler: bin/imagerecognition
     events:
       - httpApi:
           method: POST
-          path: /images
+          path: /images/recognition

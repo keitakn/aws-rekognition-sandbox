@@ -187,7 +187,7 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	if err != nil {
 		statusCode := 500
 
-		res := createErrorResponse(statusCode, "Failed rekognition")
+		res := createErrorResponse(statusCode, "Failed recognition")
 
 		return res, err
 	}

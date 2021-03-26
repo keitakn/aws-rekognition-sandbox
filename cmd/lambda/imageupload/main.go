@@ -91,6 +91,27 @@ func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTP
 	return res
 }
 
+func uploadToS3(
+	uploader *s3manager.Uploader,
+	bucket string,
+	body *bytes.Buffer,
+	contentType string,
+	key string,
+) error {
+	_, err := uploader.Upload(&s3manager.UploadInput{
+		Bucket:      aws.String(bucket),
+		Body:        body,
+		ContentType: aws.String(contentType),
+		Key:         aws.String(key),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func detectLabels(decodedImg []byte) (*rekognition.DetectLabelsOutput, error) {
 	// 画像解析
 	rekognitionImage := &rekognition.Image{
@@ -147,12 +168,13 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	buffer.Write(decodedImg)
 
 	uploadKey := "tmp/" + uid.String() + ".jpg"
-	_, err = uploader.Upload(&s3manager.UploadInput{
-		Bucket:      aws.String(os.Getenv("TRIGGER_BUCKET_NAME")),
-		Body:        buffer,
-		ContentType: aws.String("image/jpeg"),
-		Key:         aws.String(uploadKey),
-	})
+	err = uploadToS3(
+		uploader,
+		os.Getenv("TRIGGER_BUCKET_NAME"),
+		buffer,
+		"image/jpeg",
+		uploadKey,
+	)
 
 	if err != nil {
 		statusCode := 500

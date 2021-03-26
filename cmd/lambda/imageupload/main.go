@@ -75,60 +75,70 @@ func createApiGatewayV2Response(statusCode int, resBodyJson []byte) events.APIGa
 	return res
 }
 
+func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTPResponse {
+	resBody := &ResponseErrorBody{Message: message}
+	resBodyJson, _ := json.Marshal(resBody)
+
+	res := events.APIGatewayV2HTTPResponse{
+		StatusCode: statusCode,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		Body:            string(resBodyJson),
+		IsBase64Encoded: false,
+	}
+
+	return res
+}
+
+func detectLabels(decodedImg []byte) (*rekognition.DetectLabelsOutput, error) {
+	// 画像解析
+	rekognitionImage := &rekognition.Image{
+		Bytes: decodedImg,
+	}
+
+	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
+	const maxLabels = int64(10)
+	// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
+	const minConfidence = float64(85)
+
+	input := &rekognition.DetectLabelsInput{}
+	input.SetImage(rekognitionImage)
+	input.SetMaxLabels(maxLabels)
+	input.SetMinConfidence(minConfidence)
+
+	output, err := rekognitionSdk.DetectLabels(input)
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	var reqBody RequestBody
 	if err := json.Unmarshal([]byte(req.Body), &reqBody); err != nil {
-		resBody := &ResponseErrorBody{Message: "Bad Request"}
-		resBodyJson, _ := json.Marshal(resBody)
-
 		statusCode := 400
 
-		res := events.APIGatewayV2HTTPResponse{
-			StatusCode: statusCode,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body:            string(resBodyJson),
-			IsBase64Encoded: false,
-		}
+		res := createErrorResponse(statusCode, "Bad Request")
 
 		return res, err
 	}
 
 	decodedImg, err := base64.StdEncoding.DecodeString(reqBody.Image)
 	if err != nil {
-		resBody := &ResponseErrorBody{Message: "Failed Decode Base64 Image"}
-		resBodyJson, _ := json.Marshal(resBody)
-
 		statusCode := 500
 
-		res := events.APIGatewayV2HTTPResponse{
-			StatusCode: statusCode,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body:            string(resBodyJson),
-			IsBase64Encoded: false,
-		}
+		res := createErrorResponse(statusCode, "Failed Decode Base64 Image")
 
 		return res, err
 	}
 
 	uid, err := uuid.NewRandom()
 	if err != nil {
-		resBody := &ResponseErrorBody{Message: "Failed Generate UUID"}
-		resBodyJson, _ := json.Marshal(resBody)
-
 		statusCode := 500
 
-		res := events.APIGatewayV2HTTPResponse{
-			StatusCode: statusCode,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body:            string(resBodyJson),
-			IsBase64Encoded: false,
-		}
+		res := createErrorResponse(statusCode, "Failed Generate UUID")
 
 		return res, err
 	}
@@ -145,57 +155,23 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	})
 
 	if err != nil {
-		resBody := &ResponseErrorBody{Message: "Failed Upload To S3"}
-		resBodyJson, _ := json.Marshal(resBody)
-
 		statusCode := 500
 
-		res := events.APIGatewayV2HTTPResponse{
-			StatusCode: statusCode,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body:            string(resBodyJson),
-			IsBase64Encoded: false,
-		}
+		res := createErrorResponse(statusCode, "Failed Upload To S3")
 
 		return res, err
 	}
 
-	// 画像解析
-	rekognitionImage := &rekognition.Image{
-		Bytes: decodedImg,
-	}
-
-	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
-	const maxLabels = int64(10)
-	// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
-	const minConfidence = float64(85)
-
-	input := &rekognition.DetectLabelsInput{}
-	input.SetImage(rekognitionImage)
-	input.SetMaxLabels(maxLabels)
-	input.SetMinConfidence(minConfidence)
-	output, err := rekognitionSdk.DetectLabels(input)
+	detectLabelsOutput, err := detectLabels(decodedImg)
 	if err != nil {
-		resBody := &ResponseErrorBody{Message: "Failed rekognition"}
-		resBodyJson, _ := json.Marshal(resBody)
-
 		statusCode := 500
 
-		res := events.APIGatewayV2HTTPResponse{
-			StatusCode: statusCode,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body:            string(resBodyJson),
-			IsBase64Encoded: false,
-		}
+		res := createErrorResponse(statusCode, "Failed rekognition")
 
 		return res, err
 	}
 
-	resBody := &ResponseOkBody{Message: "Hello Amazon Rekognition🐱", Result: output.Labels}
+	resBody := &ResponseOkBody{Message: "Hello Amazon Rekognition🐱", Result: detectLabelsOutput.Labels}
 	resBodyJson, _ := json.Marshal(resBody)
 
 	statusCode := 200

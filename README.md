@@ -37,6 +37,7 @@ Amazon Rekognitionで取得出来るラベルをそのまま返すAPIです。
 例えば `test/images/abyssinian-cat.jpg` を解析したい場合は以下のように実行します。
 
 ```
+# MacOS上からzshシェルを用いて実行しています
 echo '{"image" : "'"$( base64 ./test/images/abyssinian-cat.jpg)"'"}' | \
 curl -v -X POST -H "Content-Type: application/json" -d @- https://YOUR_APIID.execute-api.ap-northeast-1.amazonaws.com/images/recognition | jq
 ```

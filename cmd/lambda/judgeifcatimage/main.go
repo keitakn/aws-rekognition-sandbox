@@ -114,6 +114,11 @@ func detectLabels(rekognitionSdk *rekognition.Rekognition, imgBuffer []byte) (*r
 	return output, nil
 }
 
+type IsCatImageResult struct {
+	IsCatImage  bool     `json:"isCatImage"`
+	TypesOfCats []string `json:"typesOfCats"`
+}
+
 func Handler(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
 		// recordの中にイベント発生させたS3のBucket名やKeyが入っている
@@ -136,11 +141,31 @@ func Handler(ctx context.Context, event events.S3Event) error {
 			return err
 		}
 
+		isCatImageResult := &IsCatImageResult{
+			IsCatImage: false,
+		}
+
 		for _, label := range detectLabelsOutput.Labels {
-			log.Println("🐰")
-			log.Println(label.Name)
-			log.Println(label.Confidence)
-			log.Println("🐰")
+			// ラベルにCatが含まれていて、かつConfidenceが閾値より大きい場合はねこの画像と見なす
+			const confidenceThreshold = 96
+			if *label.Name == "Cat" && *label.Confidence > confidenceThreshold {
+				isCatImageResult.IsCatImage = true
+			}
+
+			// ねこの種類を判別する為の処理
+			// label.Parents に "Cat" が含まれていれば、そのラベルはねこの種類という事にしている
+			// .e.g. test/images/abyssinian-cat.jpg の場合は {"isCatImage": true, "typesOfCats": ["Abyssinian"]}
+			// .e.g. test/images/manx-cat.jpg の場合は {"isCatImage": true, "typesOfCats": ["Manx"]}
+			for _, parent := range label.Parents {
+				if *parent.Name == "Cat" {
+					isCatImageResult.TypesOfCats = append(isCatImageResult.TypesOfCats, *label.Name)
+				}
+			}
+		}
+
+		// ねこ画像ではない場合、ここで処理を中断する
+		if !isCatImageResult.IsCatImage {
+			continue
 		}
 
 		uploadKey := "cat-images/" + strings.ReplaceAll(key, "tmp/", "")

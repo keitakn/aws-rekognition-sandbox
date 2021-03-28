@@ -1,22 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"log"
 	"os"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/google/uuid"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/rekognition"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 var downloader *s3manager.Downloader
 var uploader *s3manager.Uploader
+var rekognitionSdk *rekognition.Rekognition
 
 //nolint:gochecknoinits
 func init() {
@@ -30,6 +33,7 @@ func init() {
 
 	downloader = s3manager.NewDownloader(sess)
 	uploader = s3manager.NewUploader(sess)
+	rekognitionSdk = rekognition.New(sess)
 }
 
 func createSession(region string) (*session.Session, error) {
@@ -71,10 +75,10 @@ func downloadFromS3(downloader *s3manager.Downloader, bucket string, key string)
 	return tmpFile, err
 }
 
-func uploadToS3(uploader *s3manager.Uploader, file *os.File, bucket string, key string) error {
+func uploadToS3(uploader *s3manager.Uploader, imgBytesBuffer *bytes.Buffer, bucket string, key string) error {
 	_, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket:      aws.String(bucket),
-		Body:        file,
+		Body:        imgBytesBuffer,
 		ContentType: aws.String("image/jpeg"),
 		Key:         aws.String(key),
 	})
@@ -86,25 +90,65 @@ func uploadToS3(uploader *s3manager.Uploader, file *os.File, bucket string, key 
 	return nil
 }
 
+func detectLabels(rekognitionSdk *rekognition.Rekognition, imgBuffer []byte) (*rekognition.DetectLabelsOutput, error) {
+	// 画像解析
+	rekognitionImage := &rekognition.Image{
+		Bytes: imgBuffer,
+	}
+
+	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
+	const maxLabels = int64(10)
+	// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
+	const minConfidence = float64(85)
+
+	input := &rekognition.DetectLabelsInput{}
+	input.SetImage(rekognitionImage)
+	input.SetMaxLabels(maxLabels)
+	input.SetMinConfidence(minConfidence)
+
+	output, err := rekognitionSdk.DetectLabels(input)
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
 func Handler(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
 		// recordの中にイベント発生させたS3のBucket名やKeyが入っている
 		bucket := record.S3.Bucket.Name
 		key := record.S3.Object.Key
 
-		file, err := downloadFromS3(downloader, bucket, key)
+		img, err := downloadFromS3(downloader, bucket, key)
 		if err != nil {
 			return err
 		}
 
-		uid, err := uuid.NewRandom()
+		// 画像解析
+		imgBuffer, err := io.ReadAll(img)
 		if err != nil {
 			return err
 		}
 
-		uploadKey := "cat-images/" + uid.String() + ".jpg"
+		detectLabelsOutput, err := detectLabels(rekognitionSdk, imgBuffer)
+		if err != nil {
+			return err
+		}
 
-		err = uploadToS3(uploader, file, os.Getenv("TRIGGER_BUCKET_NAME"), uploadKey)
+		for _, label := range detectLabelsOutput.Labels {
+			log.Println("🐰")
+			log.Println(label.Name)
+			log.Println(label.Confidence)
+			log.Println("🐰")
+		}
+
+		uploadKey := "cat-images/" + strings.ReplaceAll(key, "tmp/", "")
+
+		imgBytesBuffer := new(bytes.Buffer)
+		imgBytesBuffer.Write(imgBuffer)
+
+		err = uploadToS3(uploader, imgBytesBuffer, os.Getenv("TRIGGER_BUCKET_NAME"), uploadKey)
 		if err != nil {
 			return err
 		}

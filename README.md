@@ -1,4 +1,7 @@
 # aws-rekognition-sandbox
+[![ci](https://github.com/keitakn/aws-rekognition-sandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/keitakn/aws-rekognition-sandbox/actions/workflows/ci.yml)
+[![cd](https://github.com/keitakn/aws-rekognition-sandbox/actions/workflows/cd.yml/badge.svg)](https://github.com/keitakn/aws-rekognition-sandbox/actions/workflows/cd.yml)
+
 Amazon Rekognitionで出来る事を調査する為の検証用プロジェクト
 
 ## Getting Started

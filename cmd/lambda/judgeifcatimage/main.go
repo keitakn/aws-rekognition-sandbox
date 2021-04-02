@@ -10,46 +10,42 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/rekognition"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/rekognition"
+	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-var downloader *s3manager.Downloader
-var uploader *s3manager.Uploader
-var rekognitionSdk *rekognition.Rekognition
+var uploader *manager.Uploader
+var downloader *manager.Downloader
+var rekognitionClient *rekognition.Client
 
 //nolint:gochecknoinits
 func init() {
 	region := os.Getenv("REGION")
 
-	sess, err := createSession(region)
+	ctx := context.Background()
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		// TODO ここでエラーが発生した場合、致命的な問題が起きているのでちゃんとしたログを出すように改修する
 		log.Fatalln(err)
 	}
 
-	downloader = s3manager.NewDownloader(sess)
-	uploader = s3manager.NewUploader(sess)
-	rekognitionSdk = rekognition.New(sess)
+	s3Client := s3.NewFromConfig(cfg)
+	uploader = manager.NewUploader(s3Client)
+	downloader = manager.NewDownloader(s3Client)
+
+	rekognitionClient = rekognition.NewFromConfig(cfg)
 }
 
-func createSession(region string) (*session.Session, error) {
-	sess, err := session.NewSession(&aws.Config{
-		S3ForcePathStyle: aws.Bool(true),
-		Region:           aws.String(region),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return sess, nil
-}
-
-func downloadFromS3(downloader *s3manager.Downloader, bucket string, key string) (f *os.File, err error) {
+func downloadFromS3(
+	ctx context.Context,
+	downloader *manager.Downloader,
+	bucket string,
+	key string,
+) (f *os.File, err error) {
 	tmpFile, _ := os.CreateTemp("/tmp", "tmp_img_")
 
 	defer func() {
@@ -61,6 +57,7 @@ func downloadFromS3(downloader *s3manager.Downloader, bucket string, key string)
 	}()
 
 	_, err = downloader.Download(
+		ctx,
 		tmpFile,
 		&s3.GetObjectInput{
 			Bucket: aws.String(bucket),
@@ -75,13 +72,21 @@ func downloadFromS3(downloader *s3manager.Downloader, bucket string, key string)
 	return tmpFile, err
 }
 
-func uploadToS3(uploader *s3manager.Uploader, imgBytesBuffer *bytes.Buffer, bucket string, key string) error {
-	_, err := uploader.Upload(&s3manager.UploadInput{
+func uploadToS3(
+	ctx context.Context,
+	uploader *manager.Uploader,
+	imgBytesBuffer *bytes.Buffer,
+	bucket string,
+	key string,
+) error {
+	input := &s3.PutObjectInput{
 		Bucket:      aws.String(bucket),
 		Body:        imgBytesBuffer,
 		ContentType: aws.String("image/jpeg"),
 		Key:         aws.String(key),
-	})
+	}
+
+	_, err := uploader.Upload(ctx, input)
 
 	if err != nil {
 		return err
@@ -90,23 +95,28 @@ func uploadToS3(uploader *s3manager.Uploader, imgBytesBuffer *bytes.Buffer, buck
 	return nil
 }
 
-func detectLabels(rekognitionSdk *rekognition.Rekognition, imgBuffer []byte) (*rekognition.DetectLabelsOutput, error) {
+func detectLabels(
+	ctx context.Context,
+	rekognitionClient *rekognition.Client,
+	imgBuffer []byte,
+) (*rekognition.DetectLabelsOutput, error) {
 	// 画像解析
-	rekognitionImage := &rekognition.Image{
+	rekognitionImage := &types.Image{
 		Bytes: imgBuffer,
 	}
 
 	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
-	const maxLabels = int64(10)
+	const maxLabels = int32(10)
 	// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
-	const minConfidence = float64(85)
+	const minConfidence = float32(85)
 
-	input := &rekognition.DetectLabelsInput{}
-	input.SetImage(rekognitionImage)
-	input.SetMaxLabels(maxLabels)
-	input.SetMinConfidence(minConfidence)
+	input := &rekognition.DetectLabelsInput{
+		Image:         rekognitionImage,
+		MaxLabels:     aws.Int32(maxLabels),
+		MinConfidence: aws.Float32(minConfidence),
+	}
 
-	output, err := rekognitionSdk.DetectLabels(input)
+	output, err := rekognitionClient.DetectLabels(ctx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +129,7 @@ type IsCatImageResult struct {
 	TypesOfCats []string `json:"typesOfCats"`
 }
 
-func isCatImage(labels []*rekognition.Label) *IsCatImageResult {
+func isCatImage(labels []types.Label) *IsCatImageResult {
 	isCatImageResult := &IsCatImageResult{
 		IsCatImage: false,
 	}
@@ -151,7 +161,7 @@ func Handler(ctx context.Context, event events.S3Event) error {
 		bucket := record.S3.Bucket.Name
 		key := record.S3.Object.Key
 
-		img, err := downloadFromS3(downloader, bucket, key)
+		img, err := downloadFromS3(ctx, downloader, bucket, key)
 		if err != nil {
 			return err
 		}
@@ -162,7 +172,7 @@ func Handler(ctx context.Context, event events.S3Event) error {
 			return err
 		}
 
-		detectLabelsOutput, err := detectLabels(rekognitionSdk, imgBuffer)
+		detectLabelsOutput, err := detectLabels(ctx, rekognitionClient, imgBuffer)
 		if err != nil {
 			return err
 		}
@@ -180,7 +190,7 @@ func Handler(ctx context.Context, event events.S3Event) error {
 		imgBytesBuffer := new(bytes.Buffer)
 		imgBytesBuffer.Write(imgBuffer)
 
-		err = uploadToS3(uploader, imgBytesBuffer, os.Getenv("TRIGGER_BUCKET_NAME"), uploadKey)
+		err = uploadToS3(ctx, uploader, imgBytesBuffer, os.Getenv("TRIGGER_BUCKET_NAME"), uploadKey)
 		if err != nil {
 			return err
 		}

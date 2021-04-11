@@ -40,7 +40,8 @@ func init() {
 }
 
 type RequestBody struct {
-	Image string `json:"image"`
+	Image          string `json:"image"`
+	ImageExtension string `json:"imageExtension"`
 }
 
 type ResponseOkBody struct {
@@ -129,6 +130,21 @@ func detectLabels(ctx context.Context, decodedImg []byte) (*rekognition.DetectLa
 	return output, nil
 }
 
+func decideS3ContentType(ext string) string {
+	contentType := ""
+
+	switch ext {
+	case ".png":
+		contentType = "image/png"
+	case ".webp":
+		contentType = "image/webp"
+	default:
+		contentType = "image/jpeg"
+	}
+
+	return contentType
+}
+
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	var reqBody RequestBody
 	if err := json.Unmarshal([]byte(req.Body), &reqBody); err != nil {
@@ -160,13 +176,13 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	buffer := new(bytes.Buffer)
 	buffer.Write(decodedImg)
 
-	uploadKey := "tmp/" + uid.String() + ".jpg"
+	uploadKey := "tmp/" + uid.String() + reqBody.ImageExtension
 	err = uploadToS3(
 		ctx,
 		uploader,
 		os.Getenv("TRIGGER_BUCKET_NAME"),
 		buffer,
-		"image/jpeg",
+		decideS3ContentType(reqBody.ImageExtension),
 		uploadKey,
 	)
 

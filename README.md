@@ -41,8 +41,8 @@ Amazon Rekognitionで取得出来るラベルをそのまま返すAPIです。
 
 ```
 # MacOS上からzshシェルを用いて実行しています
-echo '{"image" : "'"$( base64 ./test/images/abyssinian-cat.jpg)"'"}' | \
-curl -v -X POST -H "Content-Type: application/json" -d @- https://YOUR_APIID.execute-api.ap-northeast-1.amazonaws.com/images/recognition | jq
+echo '{"image" : "'"$( base64 ./test/images/abyssinian-cat.jpg)"'", "imageExtension": ".jpg"}' | \
+curl -v -X POST -H "Content-Type: application/json" -d @- https://pjebp2v7f7.execute-api.ap-northeast-1.amazonaws.com/images/recognition | jq
 ```
 
 下記のようなレスポンスが返ってきます。
@@ -125,7 +125,7 @@ curl -v -X POST -H "Content-Type: application/json" -d @- https://YOUR_APIID.exe
 }
 ```
 
-サンプルコードなので `.jpg` 以外の画像は受け付けていません。
+`.jpg`, `.jpeg`, `.png`, `.webp` 以外の画像は受け付けていません。
 
 ### judgeIfCatImage
 

@@ -60,5 +60,4 @@ functions:
           event: s3:ObjectCreated:*
           rules:
             - prefix: tmp/
-            - suffix: .jpg
           existing: true

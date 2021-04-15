@@ -34,7 +34,7 @@ linters:
     - nakedret
     - noctx
     - nolintlint
-    - scopelint
+    - exportloopref
     - staticcheck
     - structcheck
     - typecheck

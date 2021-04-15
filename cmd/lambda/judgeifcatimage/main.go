@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -79,10 +80,12 @@ func uploadToS3(
 	bucket string,
 	key string,
 ) error {
+	contentType := decideS3ContentType(key)
+
 	input := &s3.PutObjectInput{
 		Bucket:      aws.String(bucket),
 		Body:        imgBytesBuffer,
-		ContentType: aws.String("image/jpeg"),
+		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
 	}
 
@@ -136,7 +139,7 @@ func isCatImage(labels []types.Label) *IsCatImageResult {
 
 	for _, label := range labels {
 		// ラベルにCatが含まれていて、かつConfidenceが閾値より大きい場合はねこの画像と見なす
-		const confidenceThreshold = 96
+		const confidenceThreshold = 90
 		if *label.Name == "Cat" && *label.Confidence > confidenceThreshold {
 			isCatImageResult.IsCatImage = true
 		}
@@ -155,6 +158,38 @@ func isCatImage(labels []types.Label) *IsCatImageResult {
 	return isCatImageResult
 }
 
+func extractImageExtension(fileName string) string {
+	// 許可されている画像拡張子
+	allowedImageExtList := [...]string{".jpg", ".jpeg", ".png", ".webp"}
+
+	ext := filepath.Ext(fileName)
+
+	for _, v := range allowedImageExtList {
+		if ext == v {
+			return v
+		}
+	}
+
+	return ""
+}
+
+func decideS3ContentType(s3Key string) string {
+	ext := extractImageExtension(s3Key)
+
+	contentType := ""
+
+	switch ext {
+	case ".png":
+		contentType = "image/png"
+	case ".webp":
+		contentType = "image/webp"
+	default:
+		contentType = "image/jpeg"
+	}
+
+	return contentType
+}
+
 func Handler(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
 		// recordの中にイベント発生させたS3のBucket名やKeyが入っている
@@ -164,6 +199,12 @@ func Handler(ctx context.Context, event events.S3Event) error {
 		img, err := downloadFromS3(ctx, downloader, bucket, key)
 		if err != nil {
 			return err
+		}
+
+		ext := extractImageExtension(key)
+		if ext == "" {
+			// 拡張子が取れないという事はこれ以上処理は出来ないので関数を終了させる
+			return nil
 		}
 
 		// 画像解析

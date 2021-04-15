@@ -40,7 +40,8 @@ func init() {
 }
 
 type RequestBody struct {
-	Image string `json:"image"`
+	Image          string `json:"image"`
+	ImageExtension string `json:"imageExtension"`
 }
 
 type ResponseOkBody struct {
@@ -113,7 +114,7 @@ func detectLabels(ctx context.Context, decodedImg []byte) (*rekognition.DetectLa
 	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
 	const maxLabels = int32(10)
 	// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
-	const minConfidence = float32(85)
+	const minConfidence = float32(80)
 
 	input := &rekognition.DetectLabelsInput{
 		Image:         rekognitionImage,
@@ -127,6 +128,21 @@ func detectLabels(ctx context.Context, decodedImg []byte) (*rekognition.DetectLa
 	}
 
 	return output, nil
+}
+
+func decideS3ContentType(ext string) string {
+	contentType := ""
+
+	switch ext {
+	case ".png":
+		contentType = "image/png"
+	case ".webp":
+		contentType = "image/webp"
+	default:
+		contentType = "image/jpeg"
+	}
+
+	return contentType
 }
 
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
@@ -160,13 +176,13 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	buffer := new(bytes.Buffer)
 	buffer.Write(decodedImg)
 
-	uploadKey := "tmp/" + uid.String() + ".jpg"
+	uploadKey := "tmp/" + uid.String() + reqBody.ImageExtension
 	err = uploadToS3(
 		ctx,
 		uploader,
 		os.Getenv("TRIGGER_BUCKET_NAME"),
 		buffer,
-		"image/jpeg",
+		decideS3ContentType(reqBody.ImageExtension),
 		uploadKey,
 	)
 

@@ -114,7 +114,7 @@ func detectLabels(ctx context.Context, decodedImg []byte) (*rekognition.DetectLa
 	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
 	const maxLabels = int32(10)
 	// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
-	const minConfidence = float32(85)
+	const minConfidence = float32(80)
 
 	input := &rekognition.DetectLabelsInput{
 		Image:         rekognitionImage,

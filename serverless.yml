@@ -52,6 +52,12 @@ functions:
       - httpApi:
           method: POST
           path: /images/recognition
+  detectFaces:
+    handler: bin/detectfaces
+    events:
+      - httpApi:
+          method: POST
+          path: /images/faces
   judgeIfCatImage:
     handler: bin/judgeifcatimage
     events:

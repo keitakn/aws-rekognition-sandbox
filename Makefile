@@ -2,6 +2,7 @@
 
 build:
 	GOOS=linux GOARCH=amd64 go build -o bin/imagerecognition ./cmd/lambda/imagerecognition/main.go
+	GOOS=linux GOARCH=amd64 go build -o bin/detectfaces ./cmd/lambda/detectfaces/main.go
 	GOOS=linux GOARCH=amd64 go build -o bin/judgeifcatimage ./cmd/lambda/judgeifcatimage/main.go
 
 clean:

@@ -127,7 +127,7 @@ curl -v -X POST -H "Content-Type: application/json" -d @- https://xxxxxxxxxx.exe
 
 `.jpg`, `.jpeg`, `.png`, `.webp` 以外の画像は受け付けていません。
 
-### imageRecognition
+### detectFaces
 
 Amazon Rekognition [イメージ内の顔の検出API](https://docs.aws.amazon.com/ja_jp/rekognition/latest/dg/faces-detect-images.html) で取得出来るラベルをそのまま返すAPIです。
 

@@ -42,7 +42,7 @@ Amazon Rekognitionで取得出来るラベルをそのまま返すAPIです。
 ```
 # MacOS上からzshシェルを用いて実行しています
 echo '{"image" : "'"$( base64 ./test/images/abyssinian-cat.jpg)"'", "imageExtension": ".jpg"}' | \
-curl -v -X POST -H "Content-Type: application/json" -d @- https://pjebp2v7f7.execute-api.ap-northeast-1.amazonaws.com/images/recognition | jq
+curl -v -X POST -H "Content-Type: application/json" -d @- https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/images/recognition | jq
 ```
 
 下記のようなレスポンスが返ってきます。
@@ -126,6 +126,141 @@ curl -v -X POST -H "Content-Type: application/json" -d @- https://pjebp2v7f7.exe
 ```
 
 `.jpg`, `.jpeg`, `.png`, `.webp` 以外の画像は受け付けていません。
+
+### imageRecognition
+
+Amazon Rekognition [イメージ内の顔の検出API](https://docs.aws.amazon.com/ja_jp/rekognition/latest/dg/faces-detect-images.html) で取得出来るラベルをそのまま返すAPIです。
+
+以下のようにリクエストを行います。
+
+```
+# MacOS上からzshシェルを用いて実行しています
+echo '{"image" : "'"$( base64 ./test/images/manx-cat.jpg)"'"}' | \
+curl -v -X POST -H "Content-Type: application/json" -d @- https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/images/faces | jq
+```
+
+下記のようなレスポンスが返ってきます。
+
+```json
+{
+  "faceDetails": [
+    {
+      "AgeRange": null,
+      "Beard": null,
+      "BoundingBox": {
+        "Height": 0.29183787,
+        "Left": 0.07472489,
+        "Top": 0.2709639,
+        "Width": 0.5417548
+      },
+      "Confidence": 66.72364,
+      "Emotions": null,
+      "Eyeglasses": null,
+      "EyesOpen": null,
+      "Gender": null,
+      "Landmarks": [
+        {
+          "Type": "eyeLeft",
+          "X": 0.30981517,
+          "Y": 0.33770314
+        },
+        {
+          "Type": "eyeRight",
+          "X": 0.50000805,
+          "Y": 0.33927107
+        },
+        {
+          "Type": "mouthLeft",
+          "X": 0.30706555,
+          "Y": 0.50413615
+        },
+        {
+          "Type": "mouthRight",
+          "X": 0.46517605,
+          "Y": 0.5042505
+        },
+        {
+          "Type": "nose",
+          "X": 0.47034857,
+          "Y": 0.42010358
+        }
+      ],
+      "MouthOpen": null,
+      "Mustache": null,
+      "Pose": {
+        "Pitch": 12.441085,
+        "Roll": 9.164827,
+        "Yaw": 6.8097568
+      },
+      "Quality": {
+        "Brightness": 95.53643,
+        "Sharpness": 92.22801
+      },
+      "Smile": null,
+      "Sunglasses": null
+    },
+    {
+      "AgeRange": null,
+      "Beard": null,
+      "BoundingBox": {
+        "Height": 0.2223244,
+        "Left": 0.7428785,
+        "Top": 0.74860626,
+        "Width": 0.3278522
+      },
+      "Confidence": 66.78572,
+      "Emotions": null,
+      "Eyeglasses": null,
+      "EyesOpen": null,
+      "Gender": null,
+      "Landmarks": [
+        {
+          "Type": "eyeLeft",
+          "X": 0.86015856,
+          "Y": 0.7967467
+        },
+        {
+          "Type": "eyeRight",
+          "X": 0.91044015,
+          "Y": 0.82621884
+        },
+        {
+          "Type": "mouthLeft",
+          "X": 0.7535296,
+          "Y": 0.8594641
+        },
+        {
+          "Type": "mouthRight",
+          "X": 0.7945388,
+          "Y": 0.8837279
+        },
+        {
+          "Type": "nose",
+          "X": 0.81529987,
+          "Y": 0.8392649
+        }
+      ],
+      "MouthOpen": null,
+      "Mustache": null,
+      "Pose": {
+        "Pitch": 9.174266,
+        "Roll": 60.05953,
+        "Yaw": 24.53278
+      },
+      "Quality": {
+        "Brightness": 85.71859,
+        "Sharpness": 4.374837
+      },
+      "Smile": null,
+      "Sunglasses": null
+    }
+  ]
+}
+```
+
+人の顔がはっきり写っている場合は、信頼度（Confidence）はかなり高めに出ます。（99%以上が多かったです）
+
+しかし動物の顔を検出する事もあります。（その場合は信頼度（Confidence）は低めになります。）
 
 ### judgeIfCatImage
 

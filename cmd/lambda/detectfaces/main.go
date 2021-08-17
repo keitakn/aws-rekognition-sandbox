@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"log"
 	"os"
@@ -11,7 +10,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
-	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
+	"github.com/keitakn/aws-rekognition-sandbox/application"
 )
 
 var rekognitionClient *rekognition.Client
@@ -30,18 +29,6 @@ func init() {
 	rekognitionClient = rekognition.NewFromConfig(cfg)
 }
 
-type RequestBody struct {
-	Image string `json:"image"`
-}
-
-type ResponseOkBody struct {
-	FaceDetails interface{} `json:"faceDetails"`
-}
-
-type ResponseErrorBody struct {
-	Message string `json:"message"`
-}
-
 func createApiGatewayV2Response(statusCode int, resBodyJson []byte) events.APIGatewayV2HTTPResponse {
 	res := events.APIGatewayV2HTTPResponse{
 		StatusCode: statusCode,
@@ -56,7 +43,7 @@ func createApiGatewayV2Response(statusCode int, resBodyJson []byte) events.APIGa
 }
 
 func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTPResponse {
-	resBody := &ResponseErrorBody{Message: message}
+	resBody := &application.DetectFacesResponseErrorBody{Message: message}
 	resBodyJson, _ := json.Marshal(resBody)
 
 	res := events.APIGatewayV2HTTPResponse{
@@ -71,26 +58,8 @@ func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTP
 	return res
 }
 
-func detectFaces(ctx context.Context, decodedImg []byte) (*rekognition.DetectFacesOutput, error) {
-	// 画像解析
-	rekognitionImage := &types.Image{
-		Bytes: decodedImg,
-	}
-
-	input := &rekognition.DetectFacesInput{
-		Image: rekognitionImage,
-	}
-
-	output, err := rekognitionClient.DetectFaces(ctx, input)
-	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
-}
-
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	var reqBody RequestBody
+	var reqBody application.DetectFacesRequestBody
 	if err := json.Unmarshal([]byte(req.Body), &reqBody); err != nil {
 		statusCode := 400
 
@@ -99,28 +68,27 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	decodedImg, err := base64.StdEncoding.DecodeString(reqBody.Image)
-	if err != nil {
+	scenario := &application.DetectFacesScenario{RekognitionClient: rekognitionClient}
+
+	scenarioRes := scenario.DetectFaces(ctx, reqBody)
+	if scenarioRes.IsError {
 		statusCode := 500
 
-		res := createErrorResponse(statusCode, "Failed Decode Base64 Image")
-
-		return res, err
+		switch scenarioRes.ErrorBody.Message {
+		case "Failed Decode Base64 Image":
+			res := createErrorResponse(statusCode, scenarioRes.ErrorBody.Message)
+			return res, nil
+		case "Failed detectFaces":
+			res := createErrorResponse(statusCode, scenarioRes.ErrorBody.Message)
+			return res, nil
+		default:
+			res := createErrorResponse(statusCode, "Internal Server Error")
+			return res, nil
+		}
 	}
-
-	detectFacesOutput, err := detectFaces(ctx, decodedImg)
-	if err != nil {
-		statusCode := 500
-
-		res := createErrorResponse(statusCode, "Failed detectFaces")
-
-		return res, err
-	}
-
-	resBody := &ResponseOkBody{FaceDetails: detectFacesOutput.FaceDetails}
-	resBodyJson, _ := json.Marshal(resBody)
-
 	statusCode := 200
+
+	resBodyJson, _ := json.Marshal(scenarioRes.OkBody)
 	res := createApiGatewayV2Response(statusCode, resBodyJson)
 
 	return res, nil

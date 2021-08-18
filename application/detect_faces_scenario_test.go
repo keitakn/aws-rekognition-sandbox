@@ -19,6 +19,7 @@ func TestMain(m *testing.M) {
 	os.Exit(status)
 }
 
+//nolint:funlen
 func TestHandler(t *testing.T) {
 	t.Run("Successful Face labels are detected", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -71,6 +72,63 @@ func TestHandler(t *testing.T) {
 		resConfidence := *res.OkBody.DetectFacesOutput.FaceDetails[0].Confidence
 		if resConfidence != confidenceExpected {
 			t.Error("\nActually: ", resConfidence, "\nExpected: ", confidenceExpected)
+		}
+
+		if reflect.DeepEqual(res, expected) == false {
+			t.Error("\nActually: ", res, "\nExpected: ", expected)
+		}
+	})
+
+	t.Run("Successful Face labels are not detected because it is not a human face", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockClient := mock.NewMockRekognitionClient(ctrl)
+
+		base64Img, err := encodeImageToBase64("../test/images/munchkin-cat.png")
+		if err != nil {
+			t.Fatal("Error failed to encodeImageToBase64", err)
+		}
+
+		decodedImg, err := decodeImageFromBase64(base64Img)
+		if err != nil {
+			t.Fatal("Error failed to decodeImageFromBase64", err)
+		}
+
+		params := &rekognition.DetectFacesInput{
+			Image: &types.Image{Bytes: decodedImg},
+		}
+
+		faceDetails := []types.FaceDetail{}
+
+		expectedDetectFacesOutput := &rekognition.DetectFacesOutput{
+			FaceDetails: faceDetails,
+		}
+
+		ctx := context.Background()
+
+		mockClient.EXPECT().DetectFaces(ctx, params).Return(expectedDetectFacesOutput, nil)
+
+		req := &DetectFacesRequestBody{
+			Image: base64Img,
+		}
+
+		scenario := &DetectFacesScenario{
+			RekognitionClient: mockClient,
+		}
+
+		res := scenario.DetectFaces(ctx, *req)
+
+		expected := &DetectFacesResponse{
+			OkBody: &DetectFacesResponseOkBody{
+				DetectFacesOutput: expectedDetectFacesOutput,
+			},
+			IsError: false,
+		}
+
+		resFaceDetails := res.OkBody.DetectFacesOutput.FaceDetails
+		if len(resFaceDetails) != 0 {
+			t.Error("\nActually: ", resFaceDetails)
 		}
 
 		if reflect.DeepEqual(res, expected) == false {

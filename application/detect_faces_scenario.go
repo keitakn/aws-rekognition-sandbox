@@ -14,7 +14,7 @@ type DetectFacesRequestBody struct {
 }
 
 type DetectFacesResponseOkBody struct {
-	FaceDetails interface{} `json:"faceDetails"`
+	DetectFacesOutput *rekognition.DetectFacesOutput `json:"detectFacesOutput"`
 }
 
 type DetectFacesResponseErrorBody struct {
@@ -50,7 +50,7 @@ func (s *DetectFacesScenario) DetectFaces(ctx context.Context, req DetectFacesRe
 
 	return &DetectFacesResponse{
 		OkBody: &DetectFacesResponseOkBody{
-			FaceDetails: detectFacesOutput,
+			DetectFacesOutput: detectFacesOutput,
 		},
 		IsError: false,
 	}

@@ -281,3 +281,22 @@ curl -v -X POST -H "Content-Type: application/json" -d @- https://xxxxxxxxxx.exe
 - `test/images/manx-cat.jpg` の場合は以下のようになる
 
 `{"isCatImage": true, "typesOfCats": ["Manx"]}`
+
+## テストコードの作成
+
+テストコードは `aws-sdk-go-v2` をモックに置き換える形で実装します。
+
+下記のようにモックを生成します。（GoのDockerコンテナの中で実行します）
+
+```bash
+mockgen -source=infrastructure/rekognition_client.go -destination mock/rekognition_client.go -package mock
+```
+
+こちらのコマンドは `mock/rekognition_client.go` を生成した時のものです。
+
+他にもモックが必要な物があればこちらと同じようにモック化します。
+
+モックを生成する際は以下のルールに従って生成します。
+
+- package名は `mock`
+- `mock/` ディレクトリに配置する

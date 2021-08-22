@@ -27,6 +27,8 @@ func TestMain(m *testing.M) {
 
 //nolint:funlen
 func TestHandler(t *testing.T) {
+	const mockUuid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+
 	t.Run("Successful fetch the image label", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -85,7 +87,6 @@ func TestHandler(t *testing.T) {
 		buffer := new(bytes.Buffer)
 		buffer.Write(decodedImg)
 
-		mockUuid := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 		key := "tmp/" + mockUuid + ".jpg"
 
 		s3PutObjectInput := &s3.PutObjectInput{
@@ -198,7 +199,6 @@ func TestHandler(t *testing.T) {
 		buffer := new(bytes.Buffer)
 		buffer.Write(decodedImg)
 
-		mockUuid := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 		key := "tmp/" + mockUuid + ".jpg"
 
 		s3PutObjectInput := &s3.PutObjectInput{
@@ -232,6 +232,87 @@ func TestHandler(t *testing.T) {
 		}
 
 		expectedErrorMessage := "Failed Upload To S3"
+		if res.ErrorBody.Message != expectedErrorMessage {
+			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expectedErrorMessage)
+		}
+	})
+
+	t.Run("Failure Failed recognition", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
+
+		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
+		if err != nil {
+			t.Fatal("Error failed to encodeImageToBase64", err)
+		}
+
+		decodedImg, err := test.DecodeImageFromBase64(base64Img)
+		if err != nil {
+			t.Fatal("Error failed to decodeImageFromBase64", err)
+		}
+
+		rekognitionImage := &types.Image{
+			Bytes: decodedImg,
+		}
+
+		// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
+		const maxLabels = int32(10)
+		// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
+		const minConfidence = float32(80)
+
+		detectLabelsInput := &rekognition.DetectLabelsInput{
+			Image:         rekognitionImage,
+			MaxLabels:     aws.Int32(maxLabels),
+			MinConfidence: aws.Float32(minConfidence),
+		}
+
+		ctx := context.Background()
+
+		mockRekognitionClient.EXPECT().DetectLabels(ctx, detectLabelsInput).Return(nil, errors.New("failed recognition"))
+
+		mockS3Uploader := mock.NewMockS3Uploader(ctrl)
+
+		buffer := new(bytes.Buffer)
+		buffer.Write(decodedImg)
+
+		key := "tmp/" + mockUuid + ".jpg"
+
+		s3PutObjectInput := &s3.PutObjectInput{
+			Bucket:      aws.String(os.Getenv("TRIGGER_BUCKET_NAME")),
+			Body:        buffer,
+			ContentType: aws.String("image/jpeg"),
+			Key:         aws.String(key),
+		}
+
+		s3UploadOutput := &manager.UploadOutput{
+			Location: "https://exmple.s3.ap-northeast-1.amazonaws.com/" + key,
+		}
+
+		mockS3Uploader.EXPECT().Upload(ctx, s3PutObjectInput).Return(s3UploadOutput, nil)
+
+		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
+		mockUniqueIdGenerator.EXPECT().Generate().Return(mockUuid, nil)
+
+		scenario := application.ImageRecognitionScenario{
+			RekognitionClient: mockRekognitionClient,
+			S3Uploader:        mockS3Uploader,
+			UniqueIdGenerator: mockUniqueIdGenerator,
+		}
+
+		req := application.ImageRecognitionRequestBody{
+			Image:          base64Img,
+			ImageExtension: ".jpg",
+		}
+
+		res := scenario.ImageRecognition(ctx, req)
+
+		if !res.IsError {
+			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)
+		}
+
+		expectedErrorMessage := "Failed recognition"
 		if res.ErrorBody.Message != expectedErrorMessage {
 			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expectedErrorMessage)
 		}

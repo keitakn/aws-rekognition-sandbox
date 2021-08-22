@@ -100,7 +100,7 @@ func (
 		OkBody: &ImageRecognitionResponseOkBody{
 			Labels: detectLabelsOutput.Labels,
 		},
-		IsError: true,
+		IsError: false,
 	}
 }
 

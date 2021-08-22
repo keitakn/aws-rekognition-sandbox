@@ -1,6 +1,8 @@
 package infrastructure
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 type UniqueIdGenerator interface {
 	Generate() (string, error)

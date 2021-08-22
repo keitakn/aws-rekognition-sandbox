@@ -6,14 +6,14 @@ import (
 	"log"
 	"os"
 
-	"github.com/keitakn/aws-rekognition-sandbox/application"
-
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/keitakn/aws-rekognition-sandbox/application"
+	"github.com/keitakn/aws-rekognition-sandbox/infrastructure"
 )
 
 var uploader *manager.Uploader
@@ -39,6 +39,7 @@ func init() {
 	imageRecognitionScenario = &application.ImageRecognitionScenario{
 		RekognitionClient: rekognitionClient,
 		S3Uploader:        uploader,
+		UniqueIdGenerator: &infrastructure.UuidGenerator{},
 	}
 }
 

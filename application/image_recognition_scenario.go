@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"os"
 
-	"github.com/google/uuid"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
@@ -37,6 +35,7 @@ type ImageRecognitionResponse struct {
 type ImageRecognitionScenario struct {
 	RekognitionClient infrastructure.RekognitionClient
 	S3Uploader        infrastructure.S3Uploader
+	UniqueIdGenerator infrastructure.UniqueIdGenerator
 }
 
 func (
@@ -55,7 +54,7 @@ func (
 		}
 	}
 
-	uid, err := uuid.NewRandom()
+	uuid, err := s.UniqueIdGenerator.Generate()
 	if err != nil {
 		return &ImageRecognitionResponse{
 			IsError: true,
@@ -68,7 +67,7 @@ func (
 	buffer := new(bytes.Buffer)
 	buffer.Write(decodedImg)
 
-	uploadKey := "tmp/" + uid.String() + req.ImageExtension
+	uploadKey := "tmp/" + uuid + req.ImageExtension
 	err = s.uploadToS3(
 		ctx,
 		os.Getenv("TRIGGER_BUCKET_NAME"),

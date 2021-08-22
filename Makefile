@@ -1,4 +1,4 @@
-.PHONY: build clean deploy test test-ci lint format
+.PHONY: build clean deploy test test-ci lint format generate-mock
 
 build:
 	GOOS=linux GOARCH=amd64 go build -o bin/imagerecognition ./cmd/lambda/imagerecognition/main.go
@@ -29,3 +29,8 @@ lint:
 format:
 	gofmt -l -s -w .
 	goimports -w -l ./
+
+generate-mock:
+	mockgen -source=infrastructure/rekognition_client.go -destination mock/rekognition_client.go -package mock
+	mockgen -source=infrastructure/s3_uploader.go -destination mock/s3_uploader.go -package mock
+	mockgen -source=infrastructure/unique_id_generator.go -destination mock/unique_id_generator.go -package mock

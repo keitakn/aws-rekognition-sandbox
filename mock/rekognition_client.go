@@ -54,3 +54,23 @@ func (mr *MockRekognitionClientMockRecorder) DetectFaces(ctx, params interface{}
 	varargs := append([]interface{}{ctx, params}, optFns...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetectFaces", reflect.TypeOf((*MockRekognitionClient)(nil).DetectFaces), varargs...)
 }
+
+// DetectLabels mocks base method.
+func (m *MockRekognitionClient) DetectLabels(ctx context.Context, params *rekognition.DetectLabelsInput, optFns ...func(*rekognition.Options)) (*rekognition.DetectLabelsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DetectLabels", varargs...)
+	ret0, _ := ret[0].(*rekognition.DetectLabelsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DetectLabels indicates an expected call of DetectLabels.
+func (mr *MockRekognitionClientMockRecorder) DetectLabels(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetectLabels", reflect.TypeOf((*MockRekognitionClient)(nil).DetectLabels), varargs...)
+}

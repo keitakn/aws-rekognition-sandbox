@@ -7,6 +7,11 @@ import (
 )
 
 type RekognitionClient interface {
+	DetectLabels(
+		ctx context.Context,
+		params *rekognition.DetectLabelsInput,
+		optFns ...func(*rekognition.Options),
+	) (*rekognition.DetectLabelsOutput, error)
 	DetectFaces(
 		ctx context.Context,
 		params *rekognition.DetectFacesInput,

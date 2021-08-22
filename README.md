@@ -300,3 +300,9 @@ mockgen -source=infrastructure/rekognition_client.go -destination mock/rekogniti
 
 - package名は `mock`
 - `mock/` ディレクトリに配置する
+
+`Makefile` に `generate-mock` が定義されています。
+
+`make generate-mock` を実行するとテストに必要なモックが全て作成されるようになっています。
+
+必要なモックが増えた場合は `Makefile` の修正も行う必要があります。

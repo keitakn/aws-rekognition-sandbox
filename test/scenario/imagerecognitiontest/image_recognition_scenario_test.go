@@ -176,4 +176,64 @@ func TestHandler(t *testing.T) {
 			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expectedErrorMessage)
 		}
 	})
+
+	t.Run("Failure uploadToS3", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
+
+		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
+		if err != nil {
+			t.Fatal("Error failed to encodeImageToBase64", err)
+		}
+
+		decodedImg, err := test.DecodeImageFromBase64(base64Img)
+		if err != nil {
+			t.Fatal("Error failed to decodeImageFromBase64", err)
+		}
+
+		mockS3Uploader := mock.NewMockS3Uploader(ctrl)
+
+		buffer := new(bytes.Buffer)
+		buffer.Write(decodedImg)
+
+		mockUuid := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+		key := "tmp/" + mockUuid + ".jpg"
+
+		s3PutObjectInput := &s3.PutObjectInput{
+			Bucket:      aws.String(os.Getenv("TRIGGER_BUCKET_NAME")),
+			Body:        buffer,
+			ContentType: aws.String("image/jpeg"),
+			Key:         aws.String(key),
+		}
+
+		ctx := context.Background()
+		mockS3Uploader.EXPECT().Upload(ctx, s3PutObjectInput).Return(nil, errors.New("failed upload to S3"))
+
+		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
+		mockUniqueIdGenerator.EXPECT().Generate().Return(mockUuid, nil)
+
+		scenario := application.ImageRecognitionScenario{
+			RekognitionClient: mockRekognitionClient,
+			S3Uploader:        mockS3Uploader,
+			UniqueIdGenerator: mockUniqueIdGenerator,
+		}
+
+		req := application.ImageRecognitionRequestBody{
+			Image:          base64Img,
+			ImageExtension: ".jpg",
+		}
+
+		res := scenario.ImageRecognition(ctx, req)
+
+		if !res.IsError {
+			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)
+		}
+
+		expectedErrorMessage := "Failed Upload To S3"
+		if res.ErrorBody.Message != expectedErrorMessage {
+			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expectedErrorMessage)
+		}
+	})
 }

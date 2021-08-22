@@ -2,7 +2,6 @@ package detectfacestest
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"os"
 	"reflect"
@@ -13,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/keitakn/aws-rekognition-sandbox/application"
 	"github.com/keitakn/aws-rekognition-sandbox/mock"
+	"github.com/keitakn/aws-rekognition-sandbox/test"
 )
 
 func TestMain(m *testing.M) {
@@ -29,12 +29,12 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := encodeImageToBase64("../../images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
 
-		decodedImg, err := decodeImageFromBase64(base64Img)
+		decodedImg, err := test.DecodeImageFromBase64(base64Img)
 		if err != nil {
 			t.Fatal("Error failed to decodeImageFromBase64", err)
 		}
@@ -87,12 +87,12 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := encodeImageToBase64("../../images/munchkin-cat.png")
+		base64Img, err := test.EncodeImageToBase64("../../images/munchkin-cat.png")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
 
-		decodedImg, err := decodeImageFromBase64(base64Img)
+		decodedImg, err := test.DecodeImageFromBase64(base64Img)
 		if err != nil {
 			t.Fatal("Error failed to decodeImageFromBase64", err)
 		}
@@ -144,12 +144,12 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := encodeImageToBase64("../../images/munchkin-cat.png")
+		base64Img, err := test.EncodeImageToBase64("../../images/munchkin-cat.png")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
 
-		decodedImg, err := decodeImageFromBase64(base64Img)
+		decodedImg, err := test.DecodeImageFromBase64(base64Img)
 		if err != nil {
 			t.Fatal("Error failed to decodeImageFromBase64", err)
 		}
@@ -186,22 +186,4 @@ func TestHandler(t *testing.T) {
 			t.Error("\nActually: ", res, "\nExpected: ", expected)
 		}
 	})
-}
-
-func encodeImageToBase64(imgPath string) (string, error) {
-	bytes, err := os.ReadFile(imgPath)
-	if err != nil {
-		return "", err
-	}
-
-	return base64.StdEncoding.EncodeToString(bytes), nil
-}
-
-func decodeImageFromBase64(base64Img string) ([]byte, error) {
-	decodedImg, err := base64.StdEncoding.DecodeString(base64Img)
-	if err != nil {
-		return nil, err
-	}
-
-	return decodedImg, nil
 }

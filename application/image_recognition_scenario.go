@@ -59,7 +59,7 @@ func (
 		return &ImageRecognitionResponse{
 			IsError: true,
 			ErrorBody: &ImageRecognitionResponseErrorBody{
-				Message: "Failed Generate UUID",
+				Message: "Failed Generate UniqueId",
 			},
 		}
 	}

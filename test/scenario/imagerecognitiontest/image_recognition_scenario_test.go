@@ -3,6 +3,7 @@ package imagerecognitiontest
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"testing"
 
@@ -133,6 +134,46 @@ func TestHandler(t *testing.T) {
 
 		if res.IsError {
 			t.Error("\nActually: ", res.IsError, "\nExpected: ", false)
+		}
+	})
+
+	t.Run("Failure Generate UniqueId", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
+		if err != nil {
+			t.Fatal("Error failed to encodeImageToBase64", err)
+		}
+
+		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
+
+		mockS3Uploader := mock.NewMockS3Uploader(ctrl)
+
+		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
+		mockUniqueIdGenerator.EXPECT().Generate().Return("", errors.New("failed Generate UUID"))
+
+		scenario := application.ImageRecognitionScenario{
+			RekognitionClient: mockRekognitionClient,
+			S3Uploader:        mockS3Uploader,
+			UniqueIdGenerator: mockUniqueIdGenerator,
+		}
+
+		req := application.ImageRecognitionRequestBody{
+			Image:          base64Img,
+			ImageExtension: ".jpg",
+		}
+
+		ctx := context.Background()
+		res := scenario.ImageRecognition(ctx, req)
+
+		if !res.IsError {
+			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)
+		}
+
+		expectedErrorMessage := "Failed Generate UniqueId"
+		if res.ErrorBody.Message != expectedErrorMessage {
+			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expectedErrorMessage)
 		}
 	})
 }

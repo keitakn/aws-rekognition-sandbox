@@ -1,9 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"io"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,14 +12,12 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-var uploader *manager.Uploader
-var downloader *manager.Downloader
+var s3Client *s3.Client
 var rekognitionClient *rekognition.Client
 
 //nolint:gochecknoinits
@@ -34,78 +31,19 @@ func init() {
 		log.Fatalln(err)
 	}
 
-	s3Client := s3.NewFromConfig(cfg)
-	uploader = manager.NewUploader(s3Client)
-	downloader = manager.NewDownloader(s3Client)
+	s3Client = s3.NewFromConfig(cfg)
 
 	rekognitionClient = rekognition.NewFromConfig(cfg)
-}
-
-func downloadFromS3(
-	ctx context.Context,
-	downloader *manager.Downloader,
-	bucket string,
-	key string,
-) (f *os.File, err error) {
-	tmpFile, _ := os.CreateTemp("/tmp", "tmp_img_")
-
-	defer func() {
-		err := os.Remove(tmpFile.Name())
-		if err != nil {
-			// TODO ここでエラーが発生した場合、致命的な問題が起きているのでちゃんとしたログを出すように改修する
-			log.Fatalln(err)
-		}
-	}()
-
-	_, err = downloader.Download(
-		ctx,
-		tmpFile,
-		&s3.GetObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		},
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return tmpFile, err
-}
-
-func uploadToS3(
-	ctx context.Context,
-	uploader *manager.Uploader,
-	imgBytesBuffer *bytes.Buffer,
-	bucket string,
-	key string,
-) error {
-	contentType := decideS3ContentType(key)
-
-	input := &s3.PutObjectInput{
-		Bucket:      aws.String(bucket),
-		Body:        imgBytesBuffer,
-		ContentType: aws.String(contentType),
-		Key:         aws.String(key),
-	}
-
-	_, err := uploader.Upload(ctx, input)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func detectLabels(
 	ctx context.Context,
 	rekognitionClient *rekognition.Client,
-	imgBuffer []byte,
+	s3Object *types.S3Object,
 ) (*rekognition.DetectLabelsOutput, error) {
 	// 画像解析
 	rekognitionImage := &types.Image{
-		Bytes: imgBuffer,
+		S3Object: s3Object,
 	}
 
 	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
@@ -125,6 +63,27 @@ func detectLabels(
 	}
 
 	return output, nil
+}
+
+func copyS3Object(
+	ctx context.Context,
+	s3Client *s3.Client,
+	copySource string,
+	toBucket string,
+	uploadKey string,
+) error {
+	input := &s3.CopyObjectInput{
+		Bucket:     aws.String(toBucket),
+		CopySource: aws.String(copySource),
+		Key:        aws.String(uploadKey),
+	}
+
+	_, err := s3Client.CopyObject(ctx, input)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type IsCatImageResult struct {
@@ -173,32 +132,16 @@ func extractImageExtension(fileName string) string {
 	return ""
 }
 
-func decideS3ContentType(s3Key string) string {
-	ext := extractImageExtension(s3Key)
-
-	contentType := ""
-
-	switch ext {
-	case ".png":
-		contentType = "image/png"
-	case ".webp":
-		contentType = "image/webp"
-	default:
-		contentType = "image/jpeg"
-	}
-
-	return contentType
-}
-
 func Handler(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
 		// recordの中にイベント発生させたS3のBucket名やKeyが入っている
 		bucket := record.S3.Bucket.Name
 		key := record.S3.Object.Key
 
-		img, err := downloadFromS3(ctx, downloader, bucket, key)
-		if err != nil {
-			return err
+		s3Object := &types.S3Object{
+			Bucket:  aws.String(bucket),
+			Name:    aws.String(key),
+			Version: aws.String(record.S3.Object.VersionID),
 		}
 
 		ext := extractImageExtension(key)
@@ -207,13 +150,7 @@ func Handler(ctx context.Context, event events.S3Event) error {
 			return nil
 		}
 
-		// 画像解析
-		imgBuffer, err := io.ReadAll(img)
-		if err != nil {
-			return err
-		}
-
-		detectLabelsOutput, err := detectLabels(ctx, rekognitionClient, imgBuffer)
+		detectLabelsOutput, err := detectLabels(ctx, rekognitionClient, s3Object)
 		if err != nil {
 			return err
 		}
@@ -228,10 +165,20 @@ func Handler(ctx context.Context, event events.S3Event) error {
 
 		uploadKey := "cat-images/" + strings.ReplaceAll(key, "tmp/", "")
 
-		imgBytesBuffer := new(bytes.Buffer)
-		imgBytesBuffer.Write(imgBuffer)
+		copySource := fmt.Sprintf(
+			"%s/%s",
+			os.Getenv("TRIGGER_BUCKET_NAME"),
+			key,
+		)
 
-		err = uploadToS3(ctx, uploader, imgBytesBuffer, os.Getenv("TRIGGER_BUCKET_NAME"), uploadKey)
+		err = copyS3Object(
+			ctx,
+			s3Client,
+			copySource,
+			os.Getenv("TRIGGER_BUCKET_NAME"),
+			uploadKey,
+		)
+
 		if err != nil {
 			return err
 		}

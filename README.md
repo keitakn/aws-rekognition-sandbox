@@ -1,5 +1,6 @@
 # aws-rekognition-sandbox
 [![ci](https://github.com/keitakn/aws-rekognition-sandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/keitakn/aws-rekognition-sandbox/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/keitakn/aws-rekognition-sandbox/badge.svg?branch=main)](https://coveralls.io/github/keitakn/aws-rekognition-sandbox?branch=main)
 [![cd](https://github.com/keitakn/aws-rekognition-sandbox/actions/workflows/cd.yml/badge.svg)](https://github.com/keitakn/aws-rekognition-sandbox/actions/workflows/cd.yml)
 
 Amazon Rekognitionで出来る事を調査する為の検証用プロジェクト

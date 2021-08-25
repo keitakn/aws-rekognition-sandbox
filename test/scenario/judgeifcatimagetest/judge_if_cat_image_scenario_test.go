@@ -234,4 +234,30 @@ func TestHandler(t *testing.T) {
 			t.Error("\nActually: ", res, "\nExpected: ", expected)
 		}
 	})
+
+	t.Run("failure it is not an allowed image extension", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
+		expectedTargetS3ObjectKey := "tmp/sample-cat-image.gif"
+
+		scenario := application.JudgeIfCatImageScenario{
+			RekognitionClient: mockRekognitionClient,
+		}
+
+		req := &application.JudgeIfCatImageRequest{
+			TargetS3BucketName:      expectedTriggerBucketName,
+			TargetS3ObjectKey:       expectedTargetS3ObjectKey,
+			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
+		}
+
+		ctx := context.Background()
+
+		expected := "Not Allowed ImageExtension"
+		res, err := scenario.JudgeIfCatImage(ctx, req)
+		if err == nil {
+			t.Error("\nActually: ", res, "\nExpected: ", expected)
+		}
+	})
 }

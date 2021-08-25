@@ -24,5 +24,4 @@ jobs:
       - name: Execute test
         run: |
           docker-compose exec -T go make build
-          docker-compose exec -T go make lint
-          docker-compose exec -T go make test-ci
+          docker-compose exec -T go make ci

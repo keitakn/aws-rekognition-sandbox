@@ -13,7 +13,7 @@ import (
 	"github.com/keitakn/aws-rekognition-sandbox/application"
 )
 
-var rekognitionClient *rekognition.Client
+var scenario *application.DetectFacesScenario
 
 //nolint:gochecknoinits
 func init() {
@@ -26,7 +26,9 @@ func init() {
 		log.Fatalln(err)
 	}
 
-	rekognitionClient = rekognition.NewFromConfig(cfg)
+	rekognitionClient := rekognition.NewFromConfig(cfg)
+
+	scenario = &application.DetectFacesScenario{RekognitionClient: rekognitionClient}
 }
 
 func createApiGatewayV2Response(statusCode int, resBodyJson []byte) events.APIGatewayV2HTTPResponse {
@@ -67,8 +69,6 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 
 		return res, err
 	}
-
-	scenario := &application.DetectFacesScenario{RekognitionClient: rekognitionClient}
 
 	scenarioRes := scenario.DetectFaces(ctx, reqBody)
 	if scenarioRes.IsError {

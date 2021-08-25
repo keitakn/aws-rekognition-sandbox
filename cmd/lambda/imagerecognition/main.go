@@ -16,9 +16,7 @@ import (
 	"github.com/keitakn/aws-rekognition-sandbox/infrastructure"
 )
 
-var uploader *manager.Uploader
-var rekognitionClient *rekognition.Client
-var imageRecognitionScenario *application.ImageRecognitionScenario
+var scenario *application.ImageRecognitionScenario
 
 //nolint:gochecknoinits
 func init() {
@@ -32,11 +30,11 @@ func init() {
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
-	uploader = manager.NewUploader(s3Client)
+	uploader := manager.NewUploader(s3Client)
 
-	rekognitionClient = rekognition.NewFromConfig(cfg)
+	rekognitionClient := rekognition.NewFromConfig(cfg)
 
-	imageRecognitionScenario = &application.ImageRecognitionScenario{
+	scenario = &application.ImageRecognitionScenario{
 		RekognitionClient: rekognitionClient,
 		S3Uploader:        uploader,
 		UniqueIdGenerator: &infrastructure.UuidGenerator{},
@@ -91,7 +89,7 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	res := imageRecognitionScenario.ImageRecognition(
+	res := scenario.ImageRecognition(
 		ctx,
 		application.ImageRecognitionRequestBody{
 			Image:          reqBody.Image,

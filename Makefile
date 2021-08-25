@@ -26,7 +26,7 @@ format:
 	gofmt -l -s -w .
 	goimports -w -l ./
 
-ci: lint
+ci: clean build lint
 	go clean -testcache
 	go test -p 1 -v -coverprofile coverage.out -covermode atomic $$(go list ./... | grep -v /node_modules/)
 	go mod tidy && git diff -s --exit-code go.sum

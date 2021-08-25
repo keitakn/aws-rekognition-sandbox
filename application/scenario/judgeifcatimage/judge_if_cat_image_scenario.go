@@ -1,4 +1,4 @@
-package application
+package judgeifcatimage
 
 import (
 	"context"

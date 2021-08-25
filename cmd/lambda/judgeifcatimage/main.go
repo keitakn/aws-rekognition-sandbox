@@ -10,10 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/keitakn/aws-rekognition-sandbox/application"
+	"github.com/keitakn/aws-rekognition-sandbox/application/scenario/judgeifcatimage"
 )
 
-var scenario *application.JudgeIfCatImageScenario
+var scenario *judgeifcatimage.JudgeIfCatImageScenario
 
 //nolint:gochecknoinits
 func init() {
@@ -30,7 +30,7 @@ func init() {
 
 	rekognitionClient := rekognition.NewFromConfig(cfg)
 
-	scenario = &application.JudgeIfCatImageScenario{
+	scenario = &judgeifcatimage.JudgeIfCatImageScenario{
 		S3Client:          s3Client,
 		RekognitionClient: rekognitionClient,
 	}
@@ -39,7 +39,7 @@ func init() {
 func Handler(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
 		// recordの中にイベント発生させたS3のBucket名やKeyが入っている
-		judgeIfCatImageRequest := &application.JudgeIfCatImageRequest{
+		judgeIfCatImageRequest := &judgeifcatimage.JudgeIfCatImageRequest{
 			TargetS3BucketName:      record.S3.Bucket.Name,
 			TargetS3ObjectKey:       record.S3.Object.Key,
 			TargetS3ObjectVersionId: record.S3.Object.VersionID,
@@ -56,7 +56,7 @@ func Handler(ctx context.Context, event events.S3Event) error {
 			continue
 		}
 
-		copyCatImageRequest := &application.CopyCatImageToDestinationBucketRequest{
+		copyCatImageRequest := &judgeifcatimage.CopyCatImageToDestinationBucketRequest{
 			// TriggerBucketName, DestinationBucketNameに同じ値が設定されているが、同じバケットの異なるディレクトリを使っているから
 			// 実運用の際は別のバケットを指定したほうが良い
 			TriggerBucketName:     os.Getenv("TRIGGER_BUCKET_NAME"),

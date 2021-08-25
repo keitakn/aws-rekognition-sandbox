@@ -1,4 +1,4 @@
-package detectfacestest
+package detectfaces
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
 	"github.com/golang/mock/gomock"
-	"github.com/keitakn/aws-rekognition-sandbox/application"
 	"github.com/keitakn/aws-rekognition-sandbox/mock"
 	"github.com/keitakn/aws-rekognition-sandbox/test"
 )
@@ -29,7 +28,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -54,18 +53,18 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(expectedDetectFacesOutput, nil)
 
-		req := &application.DetectFacesRequestBody{
+		req := &DetectFacesRequestBody{
 			Image: base64Img,
 		}
 
-		scenario := &application.DetectFacesScenario{
+		scenario := &DetectFacesScenario{
 			RekognitionClient: mockClient,
 		}
 
 		res := scenario.DetectFaces(ctx, *req)
 
-		expected := &application.DetectFacesResponse{
-			OkBody: &application.DetectFacesResponseOkBody{
+		expected := &DetectFacesResponse{
+			OkBody: &DetectFacesResponseOkBody{
 				DetectFacesOutput: expectedDetectFacesOutput,
 			},
 			IsError: false,
@@ -87,7 +86,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../images/munchkin-cat.png")
+		base64Img, err := test.EncodeImageToBase64("../../../test/images/munchkin-cat.png")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -111,18 +110,18 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(expectedDetectFacesOutput, nil)
 
-		req := &application.DetectFacesRequestBody{
+		req := &DetectFacesRequestBody{
 			Image: base64Img,
 		}
 
-		scenario := &application.DetectFacesScenario{
+		scenario := &DetectFacesScenario{
 			RekognitionClient: mockClient,
 		}
 
 		res := scenario.DetectFaces(ctx, *req)
 
-		expected := &application.DetectFacesResponse{
-			OkBody: &application.DetectFacesResponseOkBody{
+		expected := &DetectFacesResponse{
+			OkBody: &DetectFacesResponseOkBody{
 				DetectFacesOutput: expectedDetectFacesOutput,
 			},
 			IsError: false,
@@ -144,7 +143,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../images/munchkin-cat.png")
+		base64Img, err := test.EncodeImageToBase64("../../../test/images/munchkin-cat.png")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -163,18 +162,18 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(nil, expectedDetectError)
 
-		req := &application.DetectFacesRequestBody{
+		req := &DetectFacesRequestBody{
 			Image: base64Img,
 		}
 
-		scenario := &application.DetectFacesScenario{
+		scenario := &DetectFacesScenario{
 			RekognitionClient: mockClient,
 		}
 
 		res := scenario.DetectFaces(ctx, *req)
 
-		expected := &application.DetectFacesResponse{
-			ErrorBody: &application.DetectFacesResponseErrorBody{Message: "Failed detectFaces"},
+		expected := &DetectFacesResponse{
+			ErrorBody: &DetectFacesResponseErrorBody{Message: "Failed detectFaces"},
 			IsError:   true,
 		}
 

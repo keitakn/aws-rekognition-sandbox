@@ -1,4 +1,4 @@
-package imagerecognitiontest
+package imagerecognition
 
 import (
 	"bytes"
@@ -6,8 +6,6 @@ import (
 	"errors"
 	"os"
 	"testing"
-
-	"github.com/keitakn/aws-rekognition-sandbox/application"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
@@ -35,7 +33,7 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -105,13 +103,13 @@ func TestHandler(t *testing.T) {
 		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
 		mockUniqueIdGenerator.EXPECT().Generate().Return(mockUuid, nil)
 
-		scenario := application.ImageRecognitionScenario{
+		scenario := ImageRecognitionScenario{
 			RekognitionClient: mockRekognitionClient,
 			S3Uploader:        mockS3Uploader,
 			UniqueIdGenerator: mockUniqueIdGenerator,
 		}
 
-		req := application.ImageRecognitionRequestBody{
+		req := ImageRecognitionRequestBody{
 			Image:          base64Img,
 			ImageExtension: ".jpg",
 		}
@@ -142,7 +140,7 @@ func TestHandler(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -154,13 +152,13 @@ func TestHandler(t *testing.T) {
 		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
 		mockUniqueIdGenerator.EXPECT().Generate().Return("", errors.New("failed Generate UUID"))
 
-		scenario := application.ImageRecognitionScenario{
+		scenario := ImageRecognitionScenario{
 			RekognitionClient: mockRekognitionClient,
 			S3Uploader:        mockS3Uploader,
 			UniqueIdGenerator: mockUniqueIdGenerator,
 		}
 
-		req := application.ImageRecognitionRequestBody{
+		req := ImageRecognitionRequestBody{
 			Image:          base64Img,
 			ImageExtension: ".jpg",
 		}
@@ -184,7 +182,7 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -214,13 +212,13 @@ func TestHandler(t *testing.T) {
 		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
 		mockUniqueIdGenerator.EXPECT().Generate().Return(mockUuid, nil)
 
-		scenario := application.ImageRecognitionScenario{
+		scenario := ImageRecognitionScenario{
 			RekognitionClient: mockRekognitionClient,
 			S3Uploader:        mockS3Uploader,
 			UniqueIdGenerator: mockUniqueIdGenerator,
 		}
 
-		req := application.ImageRecognitionRequestBody{
+		req := ImageRecognitionRequestBody{
 			Image:          base64Img,
 			ImageExtension: ".jpg",
 		}
@@ -243,7 +241,7 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -295,13 +293,13 @@ func TestHandler(t *testing.T) {
 		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
 		mockUniqueIdGenerator.EXPECT().Generate().Return(mockUuid, nil)
 
-		scenario := application.ImageRecognitionScenario{
+		scenario := ImageRecognitionScenario{
 			RekognitionClient: mockRekognitionClient,
 			S3Uploader:        mockS3Uploader,
 			UniqueIdGenerator: mockUniqueIdGenerator,
 		}
 
-		req := application.ImageRecognitionRequestBody{
+		req := ImageRecognitionRequestBody{
 			Image:          base64Img,
 			ImageExtension: ".jpg",
 		}

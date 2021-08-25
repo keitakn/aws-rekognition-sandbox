@@ -29,7 +29,7 @@ format:
 ci: clean build lint
 	go mod tidy && git diff -s --exit-code go.sum
 	go clean -testcache
-	go test -p 1 -v -coverprofile coverage.out -covermode atomic $$(go list ./... | grep -v /node_modules/)
+	go test -p 1 -v -coverprofile coverage.out -covermode count $$(go list ./... | grep -v /node_modules/)
 
 generate-mock:
 	mockgen -source=infrastructure/rekognition_client.go -destination mock/rekognition_client.go -package mock

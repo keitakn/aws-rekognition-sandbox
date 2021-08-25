@@ -24,3 +24,13 @@ jobs:
       - name: Execute test
         run: |
           docker-compose exec -T go make ci
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+      - name: Install goveralls
+        run: go install github.com/mattn/goveralls@latest
+      - name: Send coverage
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: goveralls -coverprofile=covprofile.out -service=github

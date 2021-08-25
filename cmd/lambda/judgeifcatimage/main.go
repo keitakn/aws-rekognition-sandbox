@@ -1,27 +1,19 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
-	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/keitakn/aws-rekognition-sandbox/application"
 )
 
-var uploader *manager.Uploader
-var downloader *manager.Downloader
-var rekognitionClient *rekognition.Client
+var scenario *application.JudgeIfCatImageScenario
 
 //nolint:gochecknoinits
 func init() {
@@ -35,203 +27,45 @@ func init() {
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
-	uploader = manager.NewUploader(s3Client)
-	downloader = manager.NewDownloader(s3Client)
 
-	rekognitionClient = rekognition.NewFromConfig(cfg)
-}
+	rekognitionClient := rekognition.NewFromConfig(cfg)
 
-func downloadFromS3(
-	ctx context.Context,
-	downloader *manager.Downloader,
-	bucket string,
-	key string,
-) (f *os.File, err error) {
-	tmpFile, _ := os.CreateTemp("/tmp", "tmp_img_")
-
-	defer func() {
-		err := os.Remove(tmpFile.Name())
-		if err != nil {
-			// TODO ここでエラーが発生した場合、致命的な問題が起きているのでちゃんとしたログを出すように改修する
-			log.Fatalln(err)
-		}
-	}()
-
-	_, err = downloader.Download(
-		ctx,
-		tmpFile,
-		&s3.GetObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		},
-	)
-
-	if err != nil {
-		return nil, err
+	scenario = &application.JudgeIfCatImageScenario{
+		S3Client:          s3Client,
+		RekognitionClient: rekognitionClient,
 	}
-
-	return tmpFile, err
-}
-
-func uploadToS3(
-	ctx context.Context,
-	uploader *manager.Uploader,
-	imgBytesBuffer *bytes.Buffer,
-	bucket string,
-	key string,
-) error {
-	contentType := decideS3ContentType(key)
-
-	input := &s3.PutObjectInput{
-		Bucket:      aws.String(bucket),
-		Body:        imgBytesBuffer,
-		ContentType: aws.String(contentType),
-		Key:         aws.String(key),
-	}
-
-	_, err := uploader.Upload(ctx, input)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func detectLabels(
-	ctx context.Context,
-	rekognitionClient *rekognition.Client,
-	imgBuffer []byte,
-) (*rekognition.DetectLabelsOutput, error) {
-	// 画像解析
-	rekognitionImage := &types.Image{
-		Bytes: imgBuffer,
-	}
-
-	// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
-	const maxLabels = int32(10)
-	// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
-	const minConfidence = float32(85)
-
-	input := &rekognition.DetectLabelsInput{
-		Image:         rekognitionImage,
-		MaxLabels:     aws.Int32(maxLabels),
-		MinConfidence: aws.Float32(minConfidence),
-	}
-
-	output, err := rekognitionClient.DetectLabels(ctx, input)
-	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
-}
-
-type IsCatImageResult struct {
-	IsCatImage  bool     `json:"isCatImage"`
-	TypesOfCats []string `json:"typesOfCats"`
-}
-
-func isCatImage(labels []types.Label) *IsCatImageResult {
-	isCatImageResult := &IsCatImageResult{
-		IsCatImage: false,
-	}
-
-	for _, label := range labels {
-		// ラベルにCatが含まれていて、かつConfidenceが閾値より大きい場合はねこの画像と見なす
-		const confidenceThreshold = 90
-		if *label.Name == "Cat" && *label.Confidence > confidenceThreshold {
-			isCatImageResult.IsCatImage = true
-		}
-
-		// ねこの種類を判別する為の処理
-		// label.Parents に "Cat" が含まれていれば、そのラベルはねこの種類という事にしている
-		// .e.g. test/images/abyssinian-cat.jpg の場合は {"isCatImage": true, "typesOfCats": ["Abyssinian"]}
-		// .e.g. test/images/manx-cat.jpg の場合は {"isCatImage": true, "typesOfCats": ["Manx"]}
-		for _, parent := range label.Parents {
-			if *parent.Name == "Cat" {
-				isCatImageResult.TypesOfCats = append(isCatImageResult.TypesOfCats, *label.Name)
-			}
-		}
-	}
-
-	return isCatImageResult
-}
-
-func extractImageExtension(fileName string) string {
-	// 許可されている画像拡張子
-	allowedImageExtList := [...]string{".jpg", ".jpeg", ".png", ".webp"}
-
-	ext := filepath.Ext(fileName)
-
-	for _, v := range allowedImageExtList {
-		if ext == v {
-			return v
-		}
-	}
-
-	return ""
-}
-
-func decideS3ContentType(s3Key string) string {
-	ext := extractImageExtension(s3Key)
-
-	contentType := ""
-
-	switch ext {
-	case ".png":
-		contentType = "image/png"
-	case ".webp":
-		contentType = "image/webp"
-	default:
-		contentType = "image/jpeg"
-	}
-
-	return contentType
 }
 
 func Handler(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
 		// recordの中にイベント発生させたS3のBucket名やKeyが入っている
-		bucket := record.S3.Bucket.Name
-		key := record.S3.Object.Key
-
-		img, err := downloadFromS3(ctx, downloader, bucket, key)
-		if err != nil {
-			return err
-		}
-
-		ext := extractImageExtension(key)
-		if ext == "" {
-			// 拡張子が取れないという事はこれ以上処理は出来ないので関数を終了させる
-			return nil
-		}
-
-		// 画像解析
-		imgBuffer, err := io.ReadAll(img)
-		if err != nil {
-			return err
-		}
-
-		detectLabelsOutput, err := detectLabels(ctx, rekognitionClient, imgBuffer)
-		if err != nil {
-			return err
+		judgeIfCatImageRequest := &application.JudgeIfCatImageRequest{
+			TargetS3BucketName:      record.S3.Bucket.Name,
+			TargetS3ObjectKey:       record.S3.Object.Key,
+			TargetS3ObjectVersionId: record.S3.Object.VersionID,
 		}
 
 		// ねこ画像かどうかを判定する
-		isCatImageResult := isCatImage(detectLabelsOutput.Labels)
+		isCatImageResponse, err := scenario.JudgeIfCatImage(ctx, judgeIfCatImageRequest)
+		if err != nil {
+			return err
+		}
 
 		// ねこ画像ではない場合、ここで処理を中断する
-		if !isCatImageResult.IsCatImage {
+		if !isCatImageResponse.IsCatImage {
 			continue
 		}
 
-		uploadKey := "cat-images/" + strings.ReplaceAll(key, "tmp/", "")
+		copyCatImageRequest := &application.CopyCatImageToDestinationBucketRequest{
+			// TriggerBucketName, DestinationBucketNameに同じ値が設定されているが、同じバケットの異なるディレクトリを使っているから
+			// 実運用の際は別のバケットを指定したほうが良い
+			TriggerBucketName:     os.Getenv("TRIGGER_BUCKET_NAME"),
+			DestinationBucketName: os.Getenv("TRIGGER_BUCKET_NAME"),
+			TargetS3ObjectKey:     judgeIfCatImageRequest.TargetS3ObjectKey,
+		}
 
-		imgBytesBuffer := new(bytes.Buffer)
-		imgBytesBuffer.Write(imgBuffer)
-
-		err = uploadToS3(ctx, uploader, imgBytesBuffer, os.Getenv("TRIGGER_BUCKET_NAME"), uploadKey)
+		// ここまで来るという事はねこ画像なので指定された場所にアップロードする
+		err = scenario.CopyCatImageToDestinationBucket(ctx, copyCatImageRequest)
 		if err != nil {
 			return err
 		}

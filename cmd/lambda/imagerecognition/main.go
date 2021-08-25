@@ -12,13 +12,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/keitakn/aws-rekognition-sandbox/application"
+	"github.com/keitakn/aws-rekognition-sandbox/application/scenario/imagerecognition"
 	"github.com/keitakn/aws-rekognition-sandbox/infrastructure"
 )
 
-var uploader *manager.Uploader
-var rekognitionClient *rekognition.Client
-var imageRecognitionScenario *application.ImageRecognitionScenario
+var scenario *imagerecognition.ImageRecognitionScenario
 
 //nolint:gochecknoinits
 func init() {
@@ -32,11 +30,11 @@ func init() {
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
-	uploader = manager.NewUploader(s3Client)
+	uploader := manager.NewUploader(s3Client)
 
-	rekognitionClient = rekognition.NewFromConfig(cfg)
+	rekognitionClient := rekognition.NewFromConfig(cfg)
 
-	imageRecognitionScenario = &application.ImageRecognitionScenario{
+	scenario = &imagerecognition.ImageRecognitionScenario{
 		RekognitionClient: rekognitionClient,
 		S3Uploader:        uploader,
 		UniqueIdGenerator: &infrastructure.UuidGenerator{},
@@ -91,9 +89,9 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	res := imageRecognitionScenario.ImageRecognition(
+	res := scenario.ImageRecognition(
 		ctx,
-		application.ImageRecognitionRequestBody{
+		imagerecognition.ImageRecognitionRequestBody{
 			Image:          reqBody.Image,
 			ImageExtension: reqBody.ImageExtension,
 		},

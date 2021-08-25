@@ -10,10 +10,10 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
-	"github.com/keitakn/aws-rekognition-sandbox/application"
+	"github.com/keitakn/aws-rekognition-sandbox/application/scenario/detectfaces"
 )
 
-var rekognitionClient *rekognition.Client
+var scenario *detectfaces.DetectFacesScenario
 
 //nolint:gochecknoinits
 func init() {
@@ -26,7 +26,9 @@ func init() {
 		log.Fatalln(err)
 	}
 
-	rekognitionClient = rekognition.NewFromConfig(cfg)
+	rekognitionClient := rekognition.NewFromConfig(cfg)
+
+	scenario = &detectfaces.DetectFacesScenario{RekognitionClient: rekognitionClient}
 }
 
 func createApiGatewayV2Response(statusCode int, resBodyJson []byte) events.APIGatewayV2HTTPResponse {
@@ -43,7 +45,7 @@ func createApiGatewayV2Response(statusCode int, resBodyJson []byte) events.APIGa
 }
 
 func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTPResponse {
-	resBody := &application.DetectFacesResponseErrorBody{Message: message}
+	resBody := &detectfaces.DetectFacesResponseErrorBody{Message: message}
 	resBodyJson, _ := json.Marshal(resBody)
 
 	res := events.APIGatewayV2HTTPResponse{
@@ -59,7 +61,7 @@ func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTP
 }
 
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	var reqBody application.DetectFacesRequestBody
+	var reqBody detectfaces.DetectFacesRequestBody
 	if err := json.Unmarshal([]byte(req.Body), &reqBody); err != nil {
 		statusCode := 400
 
@@ -67,8 +69,6 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 
 		return res, err
 	}
-
-	scenario := &application.DetectFacesScenario{RekognitionClient: rekognitionClient}
 
 	scenarioRes := scenario.DetectFaces(ctx, reqBody)
 	if scenarioRes.IsError {

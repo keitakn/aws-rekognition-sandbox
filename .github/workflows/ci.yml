@@ -23,5 +23,4 @@ jobs:
           docker-compose up --build -d
       - name: Execute test
         run: |
-          docker-compose exec -T go make build
           docker-compose exec -T go make ci

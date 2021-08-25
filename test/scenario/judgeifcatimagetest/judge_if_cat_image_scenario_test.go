@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/keitakn/aws-rekognition-sandbox/application"
 	"github.com/keitakn/aws-rekognition-sandbox/mock"
+	"github.com/pkg/errors"
 )
 
 func TestMain(m *testing.M) {
@@ -255,9 +256,64 @@ func TestHandler(t *testing.T) {
 		ctx := context.Background()
 
 		expected := "Not Allowed ImageExtension"
-		res, err := scenario.JudgeIfCatImage(ctx, req)
-		if err == nil {
-			t.Error("\nActually: ", res, "\nExpected: ", expected)
+		_, err := scenario.JudgeIfCatImage(ctx, req)
+		if err.Error() != expected {
+			t.Error("\nActually: ", err.Error(), "\nExpected: ", expected)
+		}
+	})
+
+	t.Run("failure because an error occurred in rekognitionClient", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
+		expectedTargetS3ObjectKey := "tmp/sample-error-image.jpg"
+
+		s3Object := &types.S3Object{
+			Bucket:  aws.String(expectedTriggerBucketName),
+			Name:    aws.String(expectedTargetS3ObjectKey),
+			Version: aws.String(expectedTargetS3ObjectVersionId),
+		}
+
+		rekognitionImage := &types.Image{
+			S3Object: s3Object,
+		}
+
+		// 何個までラベルを取得するかの設定、ラベルは信頼度が高い順に並んでいる
+		const maxLabels = int32(10)
+		// 信頼度の閾値、Confidenceがここで設定した値未満の場合、そのラベルはレスポンスに含まれない
+		const minConfidence = float32(85)
+
+		detectLabelsInput := &rekognition.DetectLabelsInput{
+			Image:         rekognitionImage,
+			MaxLabels:     aws.Int32(maxLabels),
+			MinConfidence: aws.Float32(minConfidence),
+		}
+
+		ctx := context.Background()
+
+		mockRekognitionClient.EXPECT().DetectLabels(
+			ctx,
+			detectLabelsInput,
+		).Return(
+			nil,
+			errors.New("failed rekognitionClient detectLabels"),
+		)
+
+		scenario := application.JudgeIfCatImageScenario{
+			RekognitionClient: mockRekognitionClient,
+		}
+
+		req := &application.JudgeIfCatImageRequest{
+			TargetS3BucketName:      expectedTriggerBucketName,
+			TargetS3ObjectKey:       expectedTargetS3ObjectKey,
+			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
+		}
+
+		expected := "failed detectLabels"
+		_, err := scenario.JudgeIfCatImage(ctx, req)
+		if err.Error() != expected {
+			t.Error("\nActually: ", err.Error(), "\nExpected: ", expected)
 		}
 	})
 }

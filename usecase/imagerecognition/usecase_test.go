@@ -33,7 +33,7 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -103,18 +103,18 @@ func TestHandler(t *testing.T) {
 		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
 		mockUniqueIdGenerator.EXPECT().Generate().Return(mockUuid, nil)
 
-		scenario := ImageRecognitionScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 			S3Uploader:        mockS3Uploader,
 			UniqueIdGenerator: mockUniqueIdGenerator,
 		}
 
-		req := ImageRecognitionRequestBody{
+		req := RequestBody{
 			Image:          base64Img,
 			ImageExtension: ".jpg",
 		}
 
-		res := scenario.ImageRecognition(ctx, req)
+		res := u.ImageRecognition(ctx, req)
 
 		resFirstLabelName := *res.OkBody.Labels[0].Name
 		if resFirstLabelName != expectedFirstLabelName {
@@ -140,7 +140,7 @@ func TestHandler(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -152,19 +152,19 @@ func TestHandler(t *testing.T) {
 		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
 		mockUniqueIdGenerator.EXPECT().Generate().Return("", errors.New("failed Generate UUID"))
 
-		scenario := ImageRecognitionScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 			S3Uploader:        mockS3Uploader,
 			UniqueIdGenerator: mockUniqueIdGenerator,
 		}
 
-		req := ImageRecognitionRequestBody{
+		req := RequestBody{
 			Image:          base64Img,
 			ImageExtension: ".jpg",
 		}
 
 		ctx := context.Background()
-		res := scenario.ImageRecognition(ctx, req)
+		res := u.ImageRecognition(ctx, req)
 
 		if !res.IsError {
 			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)
@@ -182,7 +182,7 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -212,18 +212,18 @@ func TestHandler(t *testing.T) {
 		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
 		mockUniqueIdGenerator.EXPECT().Generate().Return(mockUuid, nil)
 
-		scenario := ImageRecognitionScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 			S3Uploader:        mockS3Uploader,
 			UniqueIdGenerator: mockUniqueIdGenerator,
 		}
 
-		req := ImageRecognitionRequestBody{
+		req := RequestBody{
 			Image:          base64Img,
 			ImageExtension: ".jpg",
 		}
 
-		res := scenario.ImageRecognition(ctx, req)
+		res := u.ImageRecognition(ctx, req)
 
 		if !res.IsError {
 			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)
@@ -241,7 +241,7 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -293,18 +293,18 @@ func TestHandler(t *testing.T) {
 		mockUniqueIdGenerator := mock.NewMockUniqueIdGenerator(ctrl)
 		mockUniqueIdGenerator.EXPECT().Generate().Return(mockUuid, nil)
 
-		scenario := ImageRecognitionScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 			S3Uploader:        mockS3Uploader,
 			UniqueIdGenerator: mockUniqueIdGenerator,
 		}
 
-		req := ImageRecognitionRequestBody{
+		req := RequestBody{
 			Image:          base64Img,
 			ImageExtension: ".jpg",
 		}
 
-		res := scenario.ImageRecognition(ctx, req)
+		res := u.ImageRecognition(ctx, req)
 
 		if !res.IsError {
 			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)

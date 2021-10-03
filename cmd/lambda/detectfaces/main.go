@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/keitakn/aws-rekognition-sandbox/usecase/detectfaces"
 	"log"
 	"os"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
+	"github.com/keitakn/aws-rekognition-sandbox/usecase/detectfaces"
 )
 
 var detectFacesUseCase *detectfaces.UseCase

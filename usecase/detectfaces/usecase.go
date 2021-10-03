@@ -9,47 +9,47 @@ import (
 	"github.com/keitakn/aws-rekognition-sandbox/infrastructure"
 )
 
-type DetectFacesRequestBody struct {
+type RequestBody struct {
 	Image string `json:"image"`
 }
 
-type DetectFacesResponseOkBody struct {
+type ResponseOkBody struct {
 	DetectFacesOutput *rekognition.DetectFacesOutput `json:"detectFacesOutput"`
 }
 
-type DetectFacesResponseErrorBody struct {
+type ResponseErrorBody struct {
 	Message string `json:"message"`
 }
 
-type DetectFacesResponse struct {
-	OkBody    *DetectFacesResponseOkBody
+type Response struct {
+	OkBody    *ResponseOkBody
 	IsError   bool
-	ErrorBody *DetectFacesResponseErrorBody
+	ErrorBody *ResponseErrorBody
 }
 
-type DetectFacesScenario struct {
+type UseCase struct {
 	RekognitionClient infrastructure.RekognitionClient
 }
 
-func (s *DetectFacesScenario) DetectFaces(ctx context.Context, req DetectFacesRequestBody) *DetectFacesResponse {
+func (u *UseCase) DetectFaces(ctx context.Context, req RequestBody) *Response {
 	decodedImg, err := base64.StdEncoding.DecodeString(req.Image)
 	if err != nil {
-		return &DetectFacesResponse{
+		return &Response{
 			IsError:   true,
-			ErrorBody: &DetectFacesResponseErrorBody{Message: "Failed Decode Base64 Image"},
+			ErrorBody: &ResponseErrorBody{Message: "Failed Decode Base64 Image"},
 		}
 	}
 
-	detectFacesOutput, err := s.detectFaces(ctx, decodedImg)
+	detectFacesOutput, err := u.detectFaces(ctx, decodedImg)
 	if err != nil {
-		return &DetectFacesResponse{
+		return &Response{
 			IsError:   true,
-			ErrorBody: &DetectFacesResponseErrorBody{Message: "Failed detectFaces"},
+			ErrorBody: &ResponseErrorBody{Message: "Failed detectFaces"},
 		}
 	}
 
-	return &DetectFacesResponse{
-		OkBody: &DetectFacesResponseOkBody{
+	return &Response{
+		OkBody: &ResponseOkBody{
 			DetectFacesOutput: detectFacesOutput,
 		},
 		IsError: false,
@@ -57,7 +57,7 @@ func (s *DetectFacesScenario) DetectFaces(ctx context.Context, req DetectFacesRe
 }
 
 func (
-	s *DetectFacesScenario,
+	u *UseCase,
 ) detectFaces(
 	ctx context.Context,
 	decodedImg []byte,
@@ -71,7 +71,7 @@ func (
 		Image: rekognitionImage,
 	}
 
-	output, err := s.RekognitionClient.DetectFaces(ctx, input)
+	output, err := u.RekognitionClient.DetectFaces(ctx, input)
 	if err != nil {
 		return nil, err
 	}

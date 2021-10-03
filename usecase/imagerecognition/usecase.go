@@ -13,52 +13,52 @@ import (
 	"github.com/keitakn/aws-rekognition-sandbox/infrastructure"
 )
 
-type ImageRecognitionRequestBody struct {
+type RequestBody struct {
 	Image          string `json:"image"`
 	ImageExtension string `json:"imageExtension"`
 }
 
-type ImageRecognitionResponseOkBody struct {
+type ResponseOkBody struct {
 	Labels []types.Label `json:"labels"`
 }
 
-type ImageRecognitionResponseErrorBody struct {
+type ResponseErrorBody struct {
 	Message string `json:"message"`
 }
 
-type ImageRecognitionResponse struct {
-	OkBody    *ImageRecognitionResponseOkBody
+type Response struct {
+	OkBody    *ResponseOkBody
 	IsError   bool
-	ErrorBody *ImageRecognitionResponseErrorBody
+	ErrorBody *ResponseErrorBody
 }
 
-type ImageRecognitionScenario struct {
+type UseCase struct {
 	RekognitionClient infrastructure.RekognitionClient
 	S3Uploader        infrastructure.S3Uploader
 	UniqueIdGenerator infrastructure.UniqueIdGenerator
 }
 
 func (
-	s *ImageRecognitionScenario,
+	u *UseCase,
 ) ImageRecognition(
 	ctx context.Context,
-	req ImageRecognitionRequestBody,
-) *ImageRecognitionResponse {
+	req RequestBody,
+) *Response {
 	decodedImg, err := base64.StdEncoding.DecodeString(req.Image)
 	if err != nil {
-		return &ImageRecognitionResponse{
+		return &Response{
 			IsError: true,
-			ErrorBody: &ImageRecognitionResponseErrorBody{
+			ErrorBody: &ResponseErrorBody{
 				Message: "Failed Decode Base64 Image",
 			},
 		}
 	}
 
-	uuid, err := s.UniqueIdGenerator.Generate()
+	uuid, err := u.UniqueIdGenerator.Generate()
 	if err != nil {
-		return &ImageRecognitionResponse{
+		return &Response{
 			IsError: true,
-			ErrorBody: &ImageRecognitionResponseErrorBody{
+			ErrorBody: &ResponseErrorBody{
 				Message: "Failed Generate UniqueId",
 			},
 		}
@@ -68,42 +68,42 @@ func (
 	buffer.Write(decodedImg)
 
 	uploadKey := "tmp/" + uuid + req.ImageExtension
-	err = s.uploadToS3(
+	err = u.uploadToS3(
 		ctx,
 		os.Getenv("TRIGGER_BUCKET_NAME"),
 		buffer,
-		s.decideS3ContentType(req.ImageExtension),
+		u.decideS3ContentType(req.ImageExtension),
 		uploadKey,
 	)
 
 	if err != nil {
-		return &ImageRecognitionResponse{
+		return &Response{
 			IsError: true,
-			ErrorBody: &ImageRecognitionResponseErrorBody{
+			ErrorBody: &ResponseErrorBody{
 				Message: "Failed Upload To S3",
 			},
 		}
 	}
 
-	detectLabelsOutput, err := s.detectLabels(ctx, decodedImg)
+	detectLabelsOutput, err := u.detectLabels(ctx, decodedImg)
 	if err != nil {
-		return &ImageRecognitionResponse{
+		return &Response{
 			IsError: true,
-			ErrorBody: &ImageRecognitionResponseErrorBody{
+			ErrorBody: &ResponseErrorBody{
 				Message: "Failed recognition",
 			},
 		}
 	}
 
-	return &ImageRecognitionResponse{
-		OkBody: &ImageRecognitionResponseOkBody{
+	return &Response{
+		OkBody: &ResponseOkBody{
 			Labels: detectLabelsOutput.Labels,
 		},
 		IsError: false,
 	}
 }
 
-func (s *ImageRecognitionScenario) uploadToS3(
+func (u *UseCase) uploadToS3(
 	ctx context.Context,
 	bucket string,
 	body *bytes.Buffer,
@@ -117,7 +117,7 @@ func (s *ImageRecognitionScenario) uploadToS3(
 		Key:         aws.String(key),
 	}
 
-	_, err := s.S3Uploader.Upload(ctx, input)
+	_, err := u.S3Uploader.Upload(ctx, input)
 
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func (s *ImageRecognitionScenario) uploadToS3(
 }
 
 func (
-	s *ImageRecognitionScenario,
+	u *UseCase,
 ) detectLabels(
 	ctx context.Context,
 	decodedImg []byte,
@@ -148,7 +148,7 @@ func (
 		MinConfidence: aws.Float32(minConfidence),
 	}
 
-	output, err := s.RekognitionClient.DetectLabels(ctx, input)
+	output, err := u.RekognitionClient.DetectLabels(ctx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (
 	return output, nil
 }
 
-func (s *ImageRecognitionScenario) decideS3ContentType(ext string) string {
+func (u *UseCase) decideS3ContentType(ext string) string {
 	contentType := ""
 
 	switch ext {

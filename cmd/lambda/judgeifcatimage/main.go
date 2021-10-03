@@ -5,15 +5,16 @@ import (
 	"log"
 	"os"
 
+	"github.com/keitakn/aws-rekognition-sandbox/usecase/judgeifcatimage"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/keitakn/aws-rekognition-sandbox/application/scenario/judgeifcatimage"
 )
 
-var scenario *judgeifcatimage.JudgeIfCatImageScenario
+var useCase *judgeifcatimage.UseCase
 
 //nolint:gochecknoinits
 func init() {
@@ -30,7 +31,7 @@ func init() {
 
 	rekognitionClient := rekognition.NewFromConfig(cfg)
 
-	scenario = &judgeifcatimage.JudgeIfCatImageScenario{
+	useCase = &judgeifcatimage.UseCase{
 		S3Client:          s3Client,
 		RekognitionClient: rekognitionClient,
 	}
@@ -39,14 +40,14 @@ func init() {
 func Handler(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
 		// recordの中にイベント発生させたS3のBucket名やKeyが入っている
-		judgeIfCatImageRequest := &judgeifcatimage.JudgeIfCatImageRequest{
+		judgeIfCatImageRequest := &judgeifcatimage.Request{
 			TargetS3BucketName:      record.S3.Bucket.Name,
 			TargetS3ObjectKey:       record.S3.Object.Key,
 			TargetS3ObjectVersionId: record.S3.Object.VersionID,
 		}
 
 		// ねこ画像かどうかを判定する
-		isCatImageResponse, err := scenario.JudgeIfCatImage(ctx, judgeIfCatImageRequest)
+		isCatImageResponse, err := useCase.JudgeIfCatImage(ctx, judgeIfCatImageRequest)
 		if err != nil {
 			return err
 		}
@@ -65,7 +66,7 @@ func Handler(ctx context.Context, event events.S3Event) error {
 		}
 
 		// ここまで来るという事はねこ画像なので指定された場所にアップロードする
-		err = scenario.CopyCatImageToDestinationBucket(ctx, copyCatImageRequest)
+		err = useCase.CopyCatImageToDestinationBucket(ctx, copyCatImageRequest)
 		if err != nil {
 			return err
 		}

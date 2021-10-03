@@ -28,7 +28,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../../test/images/moko-cat.jpg")
+		base64Img, err := test.EncodeImageToBase64("../../test/images/moko-cat.jpg")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -53,18 +53,18 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(expectedDetectFacesOutput, nil)
 
-		req := &DetectFacesRequestBody{
+		req := &RequestBody{
 			Image: base64Img,
 		}
 
-		scenario := &DetectFacesScenario{
+		u := &UseCase{
 			RekognitionClient: mockClient,
 		}
 
-		res := scenario.DetectFaces(ctx, *req)
+		res := u.DetectFaces(ctx, *req)
 
-		expected := &DetectFacesResponse{
-			OkBody: &DetectFacesResponseOkBody{
+		expected := &Response{
+			OkBody: &ResponseOkBody{
 				DetectFacesOutput: expectedDetectFacesOutput,
 			},
 			IsError: false,
@@ -86,7 +86,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../../test/images/munchkin-cat.png")
+		base64Img, err := test.EncodeImageToBase64("../../test/images/munchkin-cat.png")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -110,18 +110,18 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(expectedDetectFacesOutput, nil)
 
-		req := &DetectFacesRequestBody{
+		req := &RequestBody{
 			Image: base64Img,
 		}
 
-		scenario := &DetectFacesScenario{
+		u := &UseCase{
 			RekognitionClient: mockClient,
 		}
 
-		res := scenario.DetectFaces(ctx, *req)
+		res := u.DetectFaces(ctx, *req)
 
-		expected := &DetectFacesResponse{
-			OkBody: &DetectFacesResponseOkBody{
+		expected := &Response{
+			OkBody: &ResponseOkBody{
 				DetectFacesOutput: expectedDetectFacesOutput,
 			},
 			IsError: false,
@@ -143,7 +143,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient := mock.NewMockRekognitionClient(ctrl)
 
-		base64Img, err := test.EncodeImageToBase64("../../../test/images/munchkin-cat.png")
+		base64Img, err := test.EncodeImageToBase64("../../test/images/munchkin-cat.png")
 		if err != nil {
 			t.Fatal("Error failed to encodeImageToBase64", err)
 		}
@@ -162,18 +162,18 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(nil, expectedDetectError)
 
-		req := &DetectFacesRequestBody{
+		req := &RequestBody{
 			Image: base64Img,
 		}
 
-		scenario := &DetectFacesScenario{
+		u := &UseCase{
 			RekognitionClient: mockClient,
 		}
 
-		res := scenario.DetectFaces(ctx, *req)
+		res := u.DetectFaces(ctx, *req)
 
-		expected := &DetectFacesResponse{
-			ErrorBody: &DetectFacesResponseErrorBody{Message: "Failed detectFaces"},
+		expected := &Response{
+			ErrorBody: &ResponseErrorBody{Message: "Failed detectFaces"},
 			IsError:   true,
 		}
 

@@ -14,12 +14,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-type JudgeIfCatImageScenario struct {
+type UseCase struct {
 	S3Client          infrastructure.S3Client
 	RekognitionClient infrastructure.RekognitionClient
 }
 
-type JudgeIfCatImageRequest struct {
+type Request struct {
 	TargetS3BucketName      string
 	TargetS3ObjectKey       string
 	TargetS3ObjectVersionId string
@@ -31,10 +31,10 @@ type IsCatImageResponse struct {
 }
 
 func (
-	s *JudgeIfCatImageScenario,
+	u *UseCase,
 ) JudgeIfCatImage(
 	ctx context.Context,
-	req *JudgeIfCatImageRequest,
+	req *Request,
 ) (*IsCatImageResponse, error) {
 	s3Object := &types.S3Object{
 		Bucket:  aws.String(req.TargetS3BucketName),
@@ -42,19 +42,19 @@ func (
 		Version: aws.String(req.TargetS3ObjectVersionId),
 	}
 
-	ext := s.extractImageExtension(req.TargetS3ObjectKey)
+	ext := u.extractImageExtension(req.TargetS3ObjectKey)
 	if ext == "" {
 		// 拡張子が取れないという事はこれ以上処理は出来ないので関数を終了させる
 		return nil, errors.New("Not Allowed ImageExtension")
 	}
 
-	detectLabelsOutput, err := s.detectLabels(ctx, s3Object)
+	detectLabelsOutput, err := u.detectLabels(ctx, s3Object)
 	if err != nil {
 		return nil, errors.New("failed detectLabels")
 	}
 
 	// ねこ画像かどうかを判定する
-	isCatImageResponse := s.isCatImage(detectLabelsOutput.Labels)
+	isCatImageResponse := u.isCatImage(detectLabelsOutput.Labels)
 
 	return isCatImageResponse, nil
 }
@@ -66,7 +66,7 @@ type CopyCatImageToDestinationBucketRequest struct {
 }
 
 func (
-	s *JudgeIfCatImageScenario,
+	u *UseCase,
 ) CopyCatImageToDestinationBucket(
 	ctx context.Context,
 	req *CopyCatImageToDestinationBucketRequest,
@@ -79,7 +79,7 @@ func (
 
 	uploadKey := "cat-images/" + strings.ReplaceAll(req.TargetS3ObjectKey, "tmp/", "")
 
-	err := s.copyS3Object(ctx, copySource, req.DestinationBucketName, uploadKey)
+	err := u.copyS3Object(ctx, copySource, req.DestinationBucketName, uploadKey)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (
 	return nil
 }
 
-func (s *JudgeIfCatImageScenario) detectLabels(
+func (u *UseCase) detectLabels(
 	ctx context.Context,
 	s3Object *types.S3Object,
 ) (*rekognition.DetectLabelsOutput, error) {
@@ -107,7 +107,7 @@ func (s *JudgeIfCatImageScenario) detectLabels(
 		MinConfidence: aws.Float32(minConfidence),
 	}
 
-	output, err := s.RekognitionClient.DetectLabels(ctx, input)
+	output, err := u.RekognitionClient.DetectLabels(ctx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (s *JudgeIfCatImageScenario) detectLabels(
 	return output, nil
 }
 
-func (s *JudgeIfCatImageScenario) copyS3Object(
+func (u *UseCase) copyS3Object(
 	ctx context.Context,
 	copySource string,
 	toBucket string,
@@ -127,7 +127,7 @@ func (s *JudgeIfCatImageScenario) copyS3Object(
 		Key:        aws.String(uploadKey),
 	}
 
-	_, err := s.S3Client.CopyObject(ctx, input)
+	_, err := u.S3Client.CopyObject(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (s *JudgeIfCatImageScenario) copyS3Object(
 	return nil
 }
 
-func (s *JudgeIfCatImageScenario) isCatImage(labels []types.Label) *IsCatImageResponse {
+func (u *UseCase) isCatImage(labels []types.Label) *IsCatImageResponse {
 	isCatImageResponse := &IsCatImageResponse{
 		IsCatImage: false,
 	}
@@ -161,7 +161,7 @@ func (s *JudgeIfCatImageScenario) isCatImage(labels []types.Label) *IsCatImageRe
 	return isCatImageResponse
 }
 
-func (s *JudgeIfCatImageScenario) extractImageExtension(fileName string) string {
+func (u *UseCase) extractImageExtension(fileName string) string {
 	// 許可されている画像拡張子
 	allowedImageExtList := [...]string{".jpg", ".jpeg", ".png", ".webp"}
 

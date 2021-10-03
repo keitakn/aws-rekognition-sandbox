@@ -58,8 +58,8 @@ functions:
       - httpApi:
           method: POST
           path: /images/faces
-  judgeIfCatImage:
-    handler: bin/judgeifcatimage
+  isAcceptableCatImage:
+    handler: bin/isacceptablecatimage
     events:
       - s3:
           bucket: ${env:TRIGGER_BUCKET_NAME}

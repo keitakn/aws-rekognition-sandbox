@@ -1,4 +1,4 @@
-package judgeifcatimage
+package catimage
 
 import (
 	"context"
@@ -25,17 +25,17 @@ type Request struct {
 	TargetS3ObjectVersionId string
 }
 
-type IsCatImageResponse struct {
-	IsCatImage  bool     `json:"isCatImage"`
-	TypesOfCats []string `json:"typesOfCats"`
+type IsAcceptableCatImageResponse struct {
+	IsAcceptableCatImage bool     `json:"isAcceptableCatImage"`
+	TypesOfCats          []string `json:"typesOfCats"`
 }
 
 func (
 	u *UseCase,
-) JudgeIfCatImage(
+) IsAcceptableCatImage(
 	ctx context.Context,
 	req *Request,
-) (*IsCatImageResponse, error) {
+) (*IsAcceptableCatImageResponse, error) {
 	s3Object := &types.S3Object{
 		Bucket:  aws.String(req.TargetS3BucketName),
 		Name:    aws.String(req.TargetS3ObjectKey),
@@ -53,10 +53,10 @@ func (
 		return nil, errors.New("failed detectLabels")
 	}
 
-	// ねこ画像かどうかを判定する
-	isCatImageResponse := u.isCatImage(detectLabelsOutput.Labels)
+	// 受け入れ可能なねこ画像かどうかを判定する
+	response := u.isAcceptableCatImage(detectLabelsOutput.Labels)
 
-	return isCatImageResponse, nil
+	return response, nil
 }
 
 type CopyCatImageToDestinationBucketRequest struct {
@@ -135,30 +135,30 @@ func (u *UseCase) copyS3Object(
 	return nil
 }
 
-func (u *UseCase) isCatImage(labels []types.Label) *IsCatImageResponse {
-	isCatImageResponse := &IsCatImageResponse{
-		IsCatImage: false,
+func (u *UseCase) isAcceptableCatImage(labels []types.Label) *IsAcceptableCatImageResponse {
+	response := &IsAcceptableCatImageResponse{
+		IsAcceptableCatImage: false,
 	}
 
 	for _, label := range labels {
-		// ラベルにCatが含まれていて、かつConfidenceが閾値より大きい場合はねこの画像と見なす
+		// ラベルにCatが含まれていて、かつConfidenceが閾値より大きい場合は受け入れ可能なねこの画像と見なす
 		const confidenceThreshold = 90
 		if *label.Name == "Cat" && *label.Confidence > confidenceThreshold {
-			isCatImageResponse.IsCatImage = true
+			response.IsAcceptableCatImage = true
 		}
 
 		// ねこの種類を判別する為の処理
 		// label.Parents に "Cat" が含まれていれば、そのラベルはねこの種類という事にしている
-		// .e.g. test/images/abyssinian-cat.jpg の場合は {"isCatImage": true, "typesOfCats": ["Abyssinian"]}
-		// .e.g. test/images/manx-cat.jpg の場合は {"isCatImage": true, "typesOfCats": ["Manx"]}
+		// .e.g. test/images/abyssinian-cat.jpg の場合は {"isAcceptableCatImage": true, "typesOfCats": ["Abyssinian"]}
+		// .e.g. test/images/manx-cat.jpg の場合は {"isAcceptableCatImage": true, "typesOfCats": ["Manx"]}
 		for _, parent := range label.Parents {
 			if *parent.Name == "Cat" {
-				isCatImageResponse.TypesOfCats = append(isCatImageResponse.TypesOfCats, *label.Name)
+				response.TypesOfCats = append(response.TypesOfCats, *label.Name)
 			}
 		}
 	}
 
-	return isCatImageResponse
+	return response
 }
 
 func (u *UseCase) extractImageExtension(fileName string) string {

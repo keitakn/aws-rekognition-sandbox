@@ -31,7 +31,7 @@ type UseCase struct {
 	RekognitionClient infrastructure.RekognitionClient
 }
 
-func (s *UseCase) DetectFaces(ctx context.Context, req RequestBody) *Response {
+func (u *UseCase) DetectFaces(ctx context.Context, req RequestBody) *Response {
 	decodedImg, err := base64.StdEncoding.DecodeString(req.Image)
 	if err != nil {
 		return &Response{
@@ -40,7 +40,7 @@ func (s *UseCase) DetectFaces(ctx context.Context, req RequestBody) *Response {
 		}
 	}
 
-	detectFacesOutput, err := s.detectFaces(ctx, decodedImg)
+	detectFacesOutput, err := u.detectFaces(ctx, decodedImg)
 	if err != nil {
 		return &Response{
 			IsError:   true,
@@ -57,7 +57,7 @@ func (s *UseCase) DetectFaces(ctx context.Context, req RequestBody) *Response {
 }
 
 func (
-	s *UseCase,
+	u *UseCase,
 ) detectFaces(
 	ctx context.Context,
 	decodedImg []byte,
@@ -71,7 +71,7 @@ func (
 		Image: rekognitionImage,
 	}
 
-	output, err := s.RekognitionClient.DetectFaces(ctx, input)
+	output, err := u.RekognitionClient.DetectFaces(ctx, input)
 	if err != nil {
 		return nil, err
 	}

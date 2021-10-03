@@ -267,7 +267,7 @@ curl -v -X POST -H "Content-Type: application/json" -d @- https://xxxxxxxxxx.exe
 
 しかし動物の顔を検出する事もあります。（その場合は信頼度（Confidence）は低めになります。）
 
-### judgeIfCatImage
+### isAcceptableCatImage
 
 `TRIGGER_BUCKET_NAME` で指定したS3バケットの `tmp/` フォルダにファイルがアップロードされた場合に起動します。
 
@@ -281,11 +281,11 @@ curl -v -X POST -H "Content-Type: application/json" -d @- https://xxxxxxxxxx.exe
 
 - `test/images/abyssinian-cat.jpg`の場合は以下のようになる
 
-`{"isCatImage": true, "typesOfCats": ["Abyssinian"]}`
+`{"isAcceptableCatImage": true, "typesOfCats": ["Abyssinian"]}`
 
 - `test/images/manx-cat.jpg` の場合は以下のようになる
 
-`{"isCatImage": true, "typesOfCats": ["Manx"]}`
+`{"isAcceptableCatImage": true, "typesOfCats": ["Manx"]}`
 
 ## テストコードの作成
 

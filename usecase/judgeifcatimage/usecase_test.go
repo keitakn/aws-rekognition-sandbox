@@ -76,17 +76,17 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient.EXPECT().DetectLabels(ctx, detectLabelsInput).Return(detectLabelsOutput, nil)
 
-		scenario := JudgeIfCatImageScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 		}
 
-		req := &JudgeIfCatImageRequest{
+		req := &Request{
 			TargetS3BucketName:      expectedTriggerBucketName,
 			TargetS3ObjectKey:       expectedTargetS3ObjectKey,
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
 		}
 
-		res, err := scenario.JudgeIfCatImage(ctx, req)
+		res, err := u.JudgeIfCatImage(ctx, req)
 		if err != nil {
 			t.Fatal("Failed JudgeIfCatImage", err)
 		}
@@ -144,17 +144,17 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient.EXPECT().DetectLabels(ctx, detectLabelsInput).Return(detectLabelsOutput, nil)
 
-		scenario := JudgeIfCatImageScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 		}
 
-		req := &JudgeIfCatImageRequest{
+		req := &Request{
 			TargetS3BucketName:      expectedTriggerBucketName,
 			TargetS3ObjectKey:       expectedTargetS3ObjectKey,
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
 		}
 
-		res, err := scenario.JudgeIfCatImage(ctx, req)
+		res, err := u.JudgeIfCatImage(ctx, req)
 		if err != nil {
 			t.Fatal("Failed JudgeIfCatImage", err)
 		}
@@ -211,17 +211,17 @@ func TestHandler(t *testing.T) {
 
 		mockRekognitionClient.EXPECT().DetectLabels(ctx, detectLabelsInput).Return(detectLabelsOutput, nil)
 
-		scenario := JudgeIfCatImageScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 		}
 
-		req := &JudgeIfCatImageRequest{
+		req := &Request{
 			TargetS3BucketName:      expectedTriggerBucketName,
 			TargetS3ObjectKey:       expectedTargetS3ObjectKey,
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
 		}
 
-		res, err := scenario.JudgeIfCatImage(ctx, req)
+		res, err := u.JudgeIfCatImage(ctx, req)
 		if err != nil {
 			t.Fatal("Failed JudgeIfCatImage", err)
 		}
@@ -242,11 +242,11 @@ func TestHandler(t *testing.T) {
 		mockRekognitionClient := mock.NewMockRekognitionClient(ctrl)
 		expectedTargetS3ObjectKey := "tmp/sample-cat-image.gif"
 
-		scenario := JudgeIfCatImageScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 		}
 
-		req := &JudgeIfCatImageRequest{
+		req := &Request{
 			TargetS3BucketName:      expectedTriggerBucketName,
 			TargetS3ObjectKey:       expectedTargetS3ObjectKey,
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
@@ -255,7 +255,7 @@ func TestHandler(t *testing.T) {
 		ctx := context.Background()
 
 		expected := "Not Allowed ImageExtension"
-		_, err := scenario.JudgeIfCatImage(ctx, req)
+		_, err := u.JudgeIfCatImage(ctx, req)
 		if err.Error() != expected {
 			t.Error("\nActually: ", err.Error(), "\nExpected: ", expected)
 		}
@@ -299,18 +299,18 @@ func TestHandler(t *testing.T) {
 			errors.New("failed rekognitionClient detectLabels"),
 		)
 
-		scenario := JudgeIfCatImageScenario{
+		u := UseCase{
 			RekognitionClient: mockRekognitionClient,
 		}
 
-		req := &JudgeIfCatImageRequest{
+		req := &Request{
 			TargetS3BucketName:      expectedTriggerBucketName,
 			TargetS3ObjectKey:       expectedTargetS3ObjectKey,
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
 		}
 
 		expected := "failed detectLabels"
-		_, err := scenario.JudgeIfCatImage(ctx, req)
+		_, err := u.JudgeIfCatImage(ctx, req)
 		if err.Error() != expected {
 			t.Error("\nActually: ", err.Error(), "\nExpected: ", expected)
 		}

@@ -4,8 +4,8 @@
   "description": "Amazon Rekognitionで出来る事を調査する為の検証用プロジェクト",
   "private": true,
   "scripts": {
-    "deploy": "serverless deploy -v",
-    "remove": "serverless remove -v"
+    "deploy": "serverless deploy --verbose",
+    "remove": "serverless remove --verbose"
   },
   "repository": {
     "type": "git",
@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/keitakn/aws-rekognition-sandbox#readme",
   "devDependencies": {
-    "serverless": "^2.31.0",
-    "serverless-prune-plugin": "^1.4.4"
+    "serverless": "^2.60.3",
+    "serverless-prune-plugin": "^1.6.0"
   }
 }

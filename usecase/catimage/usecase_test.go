@@ -1,4 +1,4 @@
-package judgeifcatimage
+package catimage
 
 import (
 	"context"
@@ -26,7 +26,7 @@ func TestHandler(t *testing.T) {
 	const expectedTargetS3ObjectVersionId = "AAAAA.1234567890123456789abcdefg"
 	const catLabelName = "Cat"
 
-	t.Run("judged to be a cat image", func(t *testing.T) {
+	t.Run("acceptable cat images", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -86,14 +86,14 @@ func TestHandler(t *testing.T) {
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
 		}
 
-		res, err := u.JudgeIfCatImage(ctx, req)
+		res, err := u.IsAcceptableCatImage(ctx, req)
 		if err != nil {
-			t.Fatal("Failed JudgeIfCatImage", err)
+			t.Fatal("Failed IsAcceptableCatImage", err)
 		}
 
-		expected := &IsCatImageResponse{
-			IsCatImage:  true,
-			TypesOfCats: []string{expectedSecondLabelName},
+		expected := &IsAcceptableCatImageResponse{
+			IsAcceptableCatImage: true,
+			TypesOfCats:          []string{expectedSecondLabelName},
 		}
 
 		if reflect.DeepEqual(res, expected) == false {
@@ -101,7 +101,7 @@ func TestHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("judged that it is not a cat image, because the confidence value is low", func(t *testing.T) {
+	t.Run("not an acceptable cat images, because the confidence value is low", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -154,13 +154,13 @@ func TestHandler(t *testing.T) {
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
 		}
 
-		res, err := u.JudgeIfCatImage(ctx, req)
+		res, err := u.IsAcceptableCatImage(ctx, req)
 		if err != nil {
-			t.Fatal("Failed JudgeIfCatImage", err)
+			t.Fatal("Failed IsAcceptableCatImage", err)
 		}
 
-		expected := &IsCatImageResponse{
-			IsCatImage: false,
+		expected := &IsAcceptableCatImageResponse{
+			IsAcceptableCatImage: false,
 		}
 
 		if reflect.DeepEqual(res, expected) == false {
@@ -168,7 +168,7 @@ func TestHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("judged that it is not a cat image, because there is no cat in the image", func(t *testing.T) {
+	t.Run("not an acceptable cat images, because there is no cat in the image", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -221,13 +221,13 @@ func TestHandler(t *testing.T) {
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
 		}
 
-		res, err := u.JudgeIfCatImage(ctx, req)
+		res, err := u.IsAcceptableCatImage(ctx, req)
 		if err != nil {
-			t.Fatal("Failed JudgeIfCatImage", err)
+			t.Fatal("Failed IsAcceptableCatImage", err)
 		}
 
-		expected := &IsCatImageResponse{
-			IsCatImage: false,
+		expected := &IsAcceptableCatImageResponse{
+			IsAcceptableCatImage: false,
 		}
 
 		if reflect.DeepEqual(res, expected) == false {
@@ -255,7 +255,7 @@ func TestHandler(t *testing.T) {
 		ctx := context.Background()
 
 		expected := "Not Allowed ImageExtension"
-		_, err := u.JudgeIfCatImage(ctx, req)
+		_, err := u.IsAcceptableCatImage(ctx, req)
 		if err.Error() != expected {
 			t.Error("\nActually: ", err.Error(), "\nExpected: ", expected)
 		}
@@ -310,7 +310,7 @@ func TestHandler(t *testing.T) {
 		}
 
 		expected := "failed detectLabels"
-		_, err := u.JudgeIfCatImage(ctx, req)
+		_, err := u.IsAcceptableCatImage(ctx, req)
 		if err.Error() != expected {
 			t.Error("\nActually: ", err.Error(), "\nExpected: ", expected)
 		}

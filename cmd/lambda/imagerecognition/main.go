@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/keitakn/aws-rekognition-sandbox/infrastructure"
 	"github.com/keitakn/aws-rekognition-sandbox/usecase/imagerecognition"
+	"github.com/pkg/errors"
 )
 
 var imageRecognitionUseCase *imagerecognition.UseCase
@@ -89,7 +90,7 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	res := imageRecognitionUseCase.ImageRecognition(
+	res, err := imageRecognitionUseCase.ImageRecognition(
 		ctx,
 		imagerecognition.RequestBody{
 			Image:          reqBody.Image,
@@ -97,14 +98,14 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		},
 	)
 
-	if res.IsError {
+	if err != nil {
 		statusCode := 500
-		resp := createErrorResponse(statusCode, res.ErrorBody.Message)
+		resp := createErrorResponse(statusCode, errors.Cause(err).Error())
 
 		return resp, nil
 	}
 
-	resBodyJson, _ := json.Marshal(res.OkBody)
+	resBodyJson, _ := json.Marshal(res)
 
 	statusCode := 200
 	resp := createApiGatewayV2Response(statusCode, resBodyJson)

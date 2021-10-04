@@ -114,25 +114,21 @@ func TestHandler(t *testing.T) {
 			ImageExtension: ".jpg",
 		}
 
-		res := u.ImageRecognition(ctx, req)
+		res, _ := u.ImageRecognition(ctx, req)
 
-		resFirstLabelName := *res.OkBody.Labels[0].Name
+		resFirstLabelName := *res.Labels[0].Name
 		if resFirstLabelName != expectedFirstLabelName {
 			t.Error("\nActually: ", resFirstLabelName, "\nExpected: ", expectedFirstLabelName)
 		}
 
-		resSecondLabelName := *res.OkBody.Labels[1].Name
+		resSecondLabelName := *res.Labels[1].Name
 		if resSecondLabelName != expectedSecondLabelName {
 			t.Error("\nActually: ", resSecondLabelName, "\nExpected: ", expectedSecondLabelName)
 		}
 
-		resFirstParentsName := *res.OkBody.Labels[1].Parents[0].Name
+		resFirstParentsName := *res.Labels[1].Parents[0].Name
 		if resFirstParentsName != expectedFirstParentsName {
 			t.Error("\nActually: ", resFirstParentsName, "\nExpected: ", expectedFirstParentsName)
-		}
-
-		if res.IsError {
-			t.Error("\nActually: ", res.IsError, "\nExpected: ", false)
 		}
 	})
 
@@ -164,15 +160,11 @@ func TestHandler(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		res := u.ImageRecognition(ctx, req)
 
-		if !res.IsError {
-			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)
-		}
-
-		expectedErrorMessage := "Failed Generate UniqueId"
-		if res.ErrorBody.Message != expectedErrorMessage {
-			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expectedErrorMessage)
+		_, err = u.ImageRecognition(ctx, req)
+		expected := ErrGenerateUniqueId
+		if !errors.Is(err, expected) {
+			t.Error("\nActually: ", err, "\nExpected: ", expected)
 		}
 	})
 
@@ -223,15 +215,10 @@ func TestHandler(t *testing.T) {
 			ImageExtension: ".jpg",
 		}
 
-		res := u.ImageRecognition(ctx, req)
-
-		if !res.IsError {
-			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)
-		}
-
-		expectedErrorMessage := "Failed Upload To S3"
-		if res.ErrorBody.Message != expectedErrorMessage {
-			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expectedErrorMessage)
+		_, err = u.ImageRecognition(ctx, req)
+		expected := ErrUploadToS3
+		if !errors.Is(err, expected) {
+			t.Error("\nActually: ", err, "\nExpected: ", expected)
 		}
 	})
 
@@ -304,15 +291,10 @@ func TestHandler(t *testing.T) {
 			ImageExtension: ".jpg",
 		}
 
-		res := u.ImageRecognition(ctx, req)
-
-		if !res.IsError {
-			t.Error("\nActually: ", res.IsError, "\nExpected: ", true)
-		}
-
-		expectedErrorMessage := "Failed recognition"
-		if res.ErrorBody.Message != expectedErrorMessage {
-			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expectedErrorMessage)
+		_, err = u.ImageRecognition(ctx, req)
+		expected := ErrRekognition
+		if !errors.Is(err, expected) {
+			t.Error("\nActually: ", err, "\nExpected: ", expected)
 		}
 	})
 }

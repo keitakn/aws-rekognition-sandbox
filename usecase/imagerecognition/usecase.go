@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/keitakn/aws-rekognition-sandbox/infrastructure"
+	"github.com/pkg/errors"
 )
 
 type RequestBody struct {
@@ -18,18 +19,8 @@ type RequestBody struct {
 	ImageExtension string `json:"imageExtension"`
 }
 
-type ResponseOkBody struct {
-	Labels []types.Label `json:"labels"`
-}
-
-type ResponseErrorBody struct {
-	Message string `json:"message"`
-}
-
 type Response struct {
-	OkBody    *ResponseOkBody
-	IsError   bool
-	ErrorBody *ResponseErrorBody
+	Labels []types.Label `json:"labels"`
 }
 
 type UseCase struct {
@@ -38,30 +29,27 @@ type UseCase struct {
 	UniqueIdGenerator infrastructure.UniqueIdGenerator
 }
 
+var (
+	ErrBase64Decode     = errors.New("failed to base64 decode")
+	ErrGenerateUniqueId = errors.New("failed to generate uniqueId")
+	ErrUploadToS3       = errors.New("failed to upload to s3")
+	ErrRekognition      = errors.New("failed to rekognition detectLabels")
+)
+
 func (
 	u *UseCase,
 ) ImageRecognition(
 	ctx context.Context,
 	req RequestBody,
-) *Response {
+) (*Response, error) {
 	decodedImg, err := base64.StdEncoding.DecodeString(req.Image)
 	if err != nil {
-		return &Response{
-			IsError: true,
-			ErrorBody: &ResponseErrorBody{
-				Message: "Failed Decode Base64 Image",
-			},
-		}
+		return nil, errors.Wrap(ErrBase64Decode, err.Error())
 	}
 
 	uuid, err := u.UniqueIdGenerator.Generate()
 	if err != nil {
-		return &Response{
-			IsError: true,
-			ErrorBody: &ResponseErrorBody{
-				Message: "Failed Generate UniqueId",
-			},
-		}
+		return nil, errors.Wrap(ErrGenerateUniqueId, err.Error())
 	}
 
 	buffer := new(bytes.Buffer)
@@ -77,30 +65,17 @@ func (
 	)
 
 	if err != nil {
-		return &Response{
-			IsError: true,
-			ErrorBody: &ResponseErrorBody{
-				Message: "Failed Upload To S3",
-			},
-		}
+		return nil, errors.Wrap(ErrUploadToS3, err.Error())
 	}
 
 	detectLabelsOutput, err := u.detectLabels(ctx, decodedImg)
 	if err != nil {
-		return &Response{
-			IsError: true,
-			ErrorBody: &ResponseErrorBody{
-				Message: "Failed recognition",
-			},
-		}
+		return nil, errors.Wrap(ErrRekognition, err.Error())
 	}
 
 	return &Response{
-		OkBody: &ResponseOkBody{
-			Labels: detectLabelsOutput.Labels,
-		},
-		IsError: false,
-	}
+		Labels: detectLabelsOutput.Labels,
+	}, nil
 }
 
 func (u *UseCase) uploadToS3(
@@ -120,7 +95,7 @@ func (u *UseCase) uploadToS3(
 	_, err := u.S3Uploader.Upload(ctx, input)
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to S3Uploader.Upload")
 	}
 
 	return nil
@@ -150,7 +125,7 @@ func (
 
 	output, err := u.RekognitionClient.DetectLabels(ctx, input)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to RekognitionClient.DetectLabels")
 	}
 
 	return output, nil

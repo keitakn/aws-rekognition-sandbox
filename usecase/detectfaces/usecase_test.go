@@ -53,7 +53,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(expectedDetectFacesOutput, nil)
 
-		req := &RequestBody{
+		req := &Request{
 			Image: base64Img,
 		}
 
@@ -61,16 +61,16 @@ func TestHandler(t *testing.T) {
 			RekognitionClient: mockClient,
 		}
 
-		res := u.DetectFaces(ctx, *req)
-
-		expected := &Response{
-			OkBody: &ResponseOkBody{
-				DetectFacesOutput: expectedDetectFacesOutput,
-			},
-			IsError: false,
+		res, err := u.DetectFaces(ctx, *req)
+		if err != nil {
+			t.Fatal("Error failed to DetectFaces", err)
 		}
 
-		resConfidence := *res.OkBody.DetectFacesOutput.FaceDetails[0].Confidence
+		expected := &Response{
+			DetectFacesOutput: expectedDetectFacesOutput,
+		}
+
+		resConfidence := *res.DetectFacesOutput.FaceDetails[0].Confidence
 		if resConfidence != confidenceExpected {
 			t.Error("\nActually: ", resConfidence, "\nExpected: ", confidenceExpected)
 		}
@@ -110,7 +110,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(expectedDetectFacesOutput, nil)
 
-		req := &RequestBody{
+		req := &Request{
 			Image: base64Img,
 		}
 
@@ -118,16 +118,16 @@ func TestHandler(t *testing.T) {
 			RekognitionClient: mockClient,
 		}
 
-		res := u.DetectFaces(ctx, *req)
-
-		expected := &Response{
-			OkBody: &ResponseOkBody{
-				DetectFacesOutput: expectedDetectFacesOutput,
-			},
-			IsError: false,
+		res, err := u.DetectFaces(ctx, *req)
+		if err != nil {
+			t.Fatal("Error failed to DetectFaces", err)
 		}
 
-		resFaceDetails := res.OkBody.DetectFacesOutput.FaceDetails
+		expected := &Response{
+			DetectFacesOutput: expectedDetectFacesOutput,
+		}
+
+		resFaceDetails := res.DetectFacesOutput.FaceDetails
 		if len(resFaceDetails) != 0 {
 			t.Error("\nActually: ", resFaceDetails)
 		}
@@ -162,7 +162,7 @@ func TestHandler(t *testing.T) {
 
 		mockClient.EXPECT().DetectFaces(ctx, params).Return(nil, expectedDetectError)
 
-		req := &RequestBody{
+		req := &Request{
 			Image: base64Img,
 		}
 
@@ -170,19 +170,10 @@ func TestHandler(t *testing.T) {
 			RekognitionClient: mockClient,
 		}
 
-		res := u.DetectFaces(ctx, *req)
-
-		expected := &Response{
-			ErrorBody: &ResponseErrorBody{Message: "Failed detectFaces"},
-			IsError:   true,
-		}
-
-		if res.ErrorBody.Message != expected.ErrorBody.Message {
-			t.Error("\nActually: ", res.ErrorBody.Message, "\nExpected: ", expected.ErrorBody.Message)
-		}
-
-		if reflect.DeepEqual(res, expected) == false {
-			t.Error("\nActually: ", res, "\nExpected: ", expected)
+		_, err = u.DetectFaces(ctx, *req)
+		expected := ErrUnexpected
+		if !errors.Is(err, expected) {
+			t.Error("\nActually: ", err, "\nExpected: ", expected)
 		}
 	})
 }

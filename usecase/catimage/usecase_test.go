@@ -254,10 +254,10 @@ func TestHandler(t *testing.T) {
 
 		ctx := context.Background()
 
-		expected := "Not Allowed ImageExtension"
 		_, err := u.IsAcceptableCatImage(ctx, req)
-		if err.Error() != expected {
-			t.Error("\nActually: ", err.Error(), "\nExpected: ", expected)
+		expected := ErrNotAllowedImageExtension
+		if !errors.Is(err, expected) {
+			t.Error("\nActually: ", err, "\nExpected: ", expected)
 		}
 	})
 
@@ -309,10 +309,10 @@ func TestHandler(t *testing.T) {
 			TargetS3ObjectVersionId: expectedTargetS3ObjectVersionId,
 		}
 
-		expected := "failed detectLabels"
 		_, err := u.IsAcceptableCatImage(ctx, req)
-		if err.Error() != expected {
-			t.Error("\nActually: ", err.Error(), "\nExpected: ", expected)
+		expected := ErrUnexpected
+		if !errors.Is(err, expected) {
+			t.Error("\nActually: ", err, "\nExpected: ", expected)
 		}
 	})
 }

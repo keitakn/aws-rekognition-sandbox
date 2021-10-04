@@ -30,6 +30,11 @@ type IsAcceptableCatImageResponse struct {
 	TypesOfCats          []string `json:"typesOfCats"`
 }
 
+var (
+	ErrNotAllowedImageExtension = errors.New("not allowed image extension")
+	ErrUnexpected               = errors.New("unexpected error")
+)
+
 func (
 	u *UseCase,
 ) IsAcceptableCatImage(
@@ -45,12 +50,12 @@ func (
 	ext := u.extractImageExtension(req.TargetS3ObjectKey)
 	if ext == "" {
 		// 拡張子が取れないという事はこれ以上処理は出来ないので関数を終了させる
-		return nil, errors.New("Not Allowed ImageExtension")
+		return nil, errors.Wrap(ErrNotAllowedImageExtension, "image extension is empty")
 	}
 
 	detectLabelsOutput, err := u.detectLabels(ctx, s3Object)
 	if err != nil {
-		return nil, errors.New("failed detectLabels")
+		return nil, errors.Wrap(ErrUnexpected, err.Error())
 	}
 
 	// 受け入れ可能なねこ画像かどうかを判定する
@@ -81,7 +86,7 @@ func (
 
 	err := u.copyS3Object(ctx, copySource, req.DestinationBucketName, uploadKey)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to UseCase.copyS3Object")
 	}
 
 	return nil
@@ -109,7 +114,7 @@ func (u *UseCase) detectLabels(
 
 	output, err := u.RekognitionClient.DetectLabels(ctx, input)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to RekognitionClient.DetectLabels")
 	}
 
 	return output, nil
@@ -129,7 +134,7 @@ func (u *UseCase) copyS3Object(
 
 	_, err := u.S3Client.CopyObject(ctx, input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to S3Client.CopyObject")
 	}
 
 	return nil

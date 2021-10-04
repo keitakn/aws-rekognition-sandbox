@@ -7,13 +7,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition/types"
 	"github.com/keitakn/aws-rekognition-sandbox/infrastructure"
+	"github.com/pkg/errors"
 )
 
-type RequestBody struct {
+type Request struct {
 	Image string `json:"image"`
 }
 
-type ResponseOkBody struct {
+type Response struct {
 	DetectFacesOutput *rekognition.DetectFacesOutput `json:"detectFacesOutput"`
 }
 
@@ -21,39 +22,29 @@ type ResponseErrorBody struct {
 	Message string `json:"message"`
 }
 
-type Response struct {
-	OkBody    *ResponseOkBody
-	IsError   bool
-	ErrorBody *ResponseErrorBody
-}
+var (
+	ErrBase64Decode = errors.New("failed to base64 decode")
+	ErrUnexpected   = errors.New("unexpected error")
+)
 
 type UseCase struct {
 	RekognitionClient infrastructure.RekognitionClient
 }
 
-func (u *UseCase) DetectFaces(ctx context.Context, req RequestBody) *Response {
+func (u *UseCase) DetectFaces(ctx context.Context, req Request) (*Response, error) {
 	decodedImg, err := base64.StdEncoding.DecodeString(req.Image)
 	if err != nil {
-		return &Response{
-			IsError:   true,
-			ErrorBody: &ResponseErrorBody{Message: "Failed Decode Base64 Image"},
-		}
+		return nil, errors.Wrap(ErrBase64Decode, err.Error())
 	}
 
 	detectFacesOutput, err := u.detectFaces(ctx, decodedImg)
 	if err != nil {
-		return &Response{
-			IsError:   true,
-			ErrorBody: &ResponseErrorBody{Message: "Failed detectFaces"},
-		}
+		return nil, errors.Wrap(ErrUnexpected, err.Error())
 	}
 
 	return &Response{
-		OkBody: &ResponseOkBody{
-			DetectFacesOutput: detectFacesOutput,
-		},
-		IsError: false,
-	}
+		DetectFacesOutput: detectFacesOutput,
+	}, nil
 }
 
 func (
@@ -73,7 +64,7 @@ func (
 
 	output, err := u.RekognitionClient.DetectFaces(ctx, input)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to RekognitionClient.DetectFaces")
 	}
 
 	return output, nil

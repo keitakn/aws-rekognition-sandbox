@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/keitakn/aws-rekognition-sandbox/usecase/detectfaces"
+	"github.com/pkg/errors"
 )
 
 var detectFacesUseCase *detectfaces.UseCase
@@ -61,7 +62,7 @@ func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTP
 }
 
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	var reqBody detectfaces.RequestBody
+	var reqBody detectfaces.Request
 	if err := json.Unmarshal([]byte(req.Body), &reqBody); err != nil {
 		statusCode := 400
 
@@ -70,25 +71,28 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		return res, err
 	}
 
-	scenarioRes := detectFacesUseCase.DetectFaces(ctx, reqBody)
-	if scenarioRes.IsError {
+	useCaseRes, err := detectFacesUseCase.DetectFaces(ctx, reqBody)
+
+	if err != nil {
 		statusCode := 500
 
-		switch scenarioRes.ErrorBody.Message {
-		case "Failed Decode Base64 Image":
-			res := createErrorResponse(statusCode, scenarioRes.ErrorBody.Message)
+		//nolint:errorlint
+		switch errors.Cause(err) {
+		case detectfaces.ErrBase64Decode:
+			res := createErrorResponse(statusCode, detectfaces.ErrBase64Decode.Error())
 			return res, nil
-		case "Failed detectFaces":
-			res := createErrorResponse(statusCode, scenarioRes.ErrorBody.Message)
+		case detectfaces.ErrUnexpected:
+			res := createErrorResponse(statusCode, detectfaces.ErrUnexpected.Error())
 			return res, nil
 		default:
 			res := createErrorResponse(statusCode, "Internal Server Error")
 			return res, nil
 		}
 	}
+
 	statusCode := 200
 
-	resBodyJson, _ := json.Marshal(scenarioRes.OkBody)
+	resBodyJson, _ := json.Marshal(useCaseRes)
 	res := createApiGatewayV2Response(statusCode, resBodyJson)
 
 	return res, nil
